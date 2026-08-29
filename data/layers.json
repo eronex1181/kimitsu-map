@@ -1,0 +1,57 @@
+{
+  "bounds": [
+    [
+      35.16628999436837,
+      139.87490595247277
+    ],
+    [
+      35.33367916834966,
+      140.12563056811564
+    ]
+  ],
+  "layers": [
+    {
+      "id": "evacuation",
+      "file": "data/evacuation.geojson",
+      "features": 82,
+      "bytes": 50278
+    },
+    {
+      "id": "embankment_regulation",
+      "file": "data/embankment_regulation.geojson",
+      "features": 5,
+      "bytes": 143183
+    },
+    {
+      "id": "bus_stops",
+      "file": "data/bus_stops.geojson",
+      "features": 211,
+      "bytes": 363086
+    },
+    {
+      "id": "sabo_designated",
+      "file": "data/sabo_designated.geojson",
+      "features": 11,
+      "bytes": 63628
+    },
+    {
+      "id": "landslide_prevention",
+      "file": "data/landslide_prevention.geojson",
+      "features": 1,
+      "bytes": 853
+    },
+    {
+      "id": "steep_slope_danger",
+      "file": "data/steep_slope_danger.geojson",
+      "features": 12,
+      "bytes": 10544
+    },
+    {
+      "id": "historical_admin",
+      "file": "data/historical_admin.geojson",
+      "features": 31,
+      "bytes": 385302,
+      "note": "historical administrative areas; source is not current boundary"
+    }
+  ]
+}

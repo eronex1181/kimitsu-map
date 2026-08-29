@@ -1,0 +1,9 @@
+{
+"type": "FeatureCollection",
+"name": "landslide_prevention",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"xy_coordinate_resolution": 1e-07,
+"features": [
+{ "type": "Feature", "properties": { "A46-a_001": "12", "A46-a_002": "12226", "A46-a_003": "富津市", "A46-a_004": "山中", "A46-a_005": "富津市山中", "A46-a_006": "2004-03-26T00:00:00", "A46-a_007": "国第372号", "A46-a_008": 277.8, "A46-a_009": 1, "city": "富津市", "name": "山中", "location": "富津市山中", "date": "2004-03-26T00:00:00", "notice": "国第372号", "layer": "landslide_prevention" }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 139.9237403, 35.1672992 ], [ 139.9276389, 35.1663934 ], [ 139.9292926, 35.1663044 ], [ 139.9292747, 35.16629 ], [ 139.9237472, 35.16629 ], [ 139.9237403, 35.1672992 ] ] ] } }
+]
+}
