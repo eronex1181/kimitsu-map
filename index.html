@@ -59,9 +59,16 @@ const map=L.map('map',{preferCanvas:true,maxZoom:19}).setView([35.50,140.13],9);
 map.createPane('csPane');       map.getPane('csPane').style.zIndex=410;
 map.createPane('hazardPane');   map.getPane('hazardPane').style.zIndex=420;
 map.createPane('boundaryPane'); map.getPane('boundaryPane').style.zIndex=425;
-map.createPane('zonesPane');    map.getPane('zonesPane').style.zIndex=430;
-map.createPane('dosyaPane');    map.getPane('dosyaPane').style.zIndex=440;
-map.createPane('markersPane');  map.getPane('markersPane').style.zIndex=450;
+map.createPane('zonesPane');     map.getPane('zonesPane').style.zIndex=430;
+map.createPane('dosyaPane');     map.getPane('dosyaPane').style.zIndex=440;
+
+// 青い今回対象は「見た目だけ」の専用Pane。
+// Pane全体でマウスイベントを無効化するため、クリックは必ず下の黄/赤レイヤーへ通る。
+map.createPane('highlightPane');
+map.getPane('highlightPane').style.zIndex=445;
+map.getPane('highlightPane').style.pointerEvents='none';
+
+map.createPane('markersPane');   map.getPane('markersPane').style.zIndex=450;
 
 // 背景
 const gsiPale=L.tileLayer(
@@ -481,7 +488,7 @@ fetch('./data/chiba_current_6targets.geojson',{cache:'no-store'})
 })
 .then(data=>{
  const current6=L.geoJSON(data,{
-   pane:'markersPane',
+   pane:'highlightPane',
    interactive:false,
    bubblingMouseEvents:false,
    style:{
@@ -491,10 +498,17 @@ fetch('./data/chiba_current_6targets.geojson',{cache:'no-store'})
      fillColor:'#00A8FF',
      fillOpacity:.50
    },
+   onEachFeature:(f,l)=>{
+     l.once('add',()=>{
+       const el=l.getElement && l.getElement();
+       if(el) el.style.pointerEvents='none';
+     });
+   }
  });
 
  // 初期OFF。チェックした時だけ青で重ねる。
  ctl.addOverlay(current6,'今回対象の既指定箇所調査（6箇所）');
+ console.log('今回対象6箇所：クリック透過の青ハイライトとして読込完了');
 })
 .catch(err=>console.error('今回対象の既指定箇所調査（6箇所）の読込に失敗:',err));
 
