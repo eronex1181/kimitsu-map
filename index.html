@@ -271,6 +271,35 @@ loadPolygonLayer(
  {color:'#c62828',weight:2,fillColor:'#ef5350',fillOpacity:.28}
 );
 
+
+// 今回対象6箇所。
+// GeoJSONの「今回対象」属性が欠けていても、箇所番号または箇所名で確実に判定する。
+const TARGET_CODES=new Set([
+ 'Ⅲ-0675',      // 黄和田畑1
+ 'Ⅱ-6089',      // 大坂1
+ 'Ⅱ-6688',      // 金谷4
+ 'Ⅱ-6099',      // 芋窪1
+ 'Ⅱ-6428',      // 亀沢32
+ 'Ⅰ-22500701'   // 四ノ宮沢
+]);
+
+const TARGET_NAMES=new Set([
+ '黄和田畑1',
+ '大坂1',
+ '金谷4',
+ '芋窪1',
+ '亀沢32',
+ '四ノ宮沢'
+]);
+
+function isCurrentTarget(p){
+ const flag=String(p?.['今回対象']??'').trim();
+ const code=String(p?.A33_004??'').trim();
+ const name=String(p?.A33_005??'').trim();
+
+ return flag!=='' || TARGET_CODES.has(code) || TARGET_NAMES.has(name);
+}
+
 // =====================================================
 // 土砂災害警戒区域 / 特別警戒区域
 // A33_002 = 1 → イエローゾーン
@@ -291,16 +320,16 @@ fetch('./A33-25_12Polygon.geojson',{cache:'no-store'})
 
    style:f=>{
      const p=f.properties||{};
-     const target=String(p['今回対象']??'').trim()!=='';
+     const target=isCurrentTarget(p);
      const zone=Number(p.A33_002);
 
      // 今回の6箇所
      if(target){
        return {
-         color:'#006064',
+         color:'#0047ab',
          weight:3.5,
          opacity:1,
-         fillColor:'#00e5ff',
+         fillColor:'#00a8ff',
          fillOpacity:.55
        };
      }
@@ -337,7 +366,7 @@ fetch('./A33-25_12Polygon.geojson',{cache:'no-store'})
 
    onEachFeature:(f,l)=>{
      const p=f.properties||{};
-     const target=String(p['今回対象']??'').trim()!=='';
+     const target=isCurrentTarget(p);
      const zone=Number(p.A33_002);
 
      const zoneName=target
@@ -351,6 +380,10 @@ fetch('./A33-25_12Polygon.geojson',{cache:'no-store'})
      const num=p.A33_004||'';
      const nm=p.A33_005||'';
      const addr=p.A33_006||p.A33_009||'';
+
+     if(target && !String(p['今回対象']??'').trim()){
+       p['今回対象']='○';
+     }
 
      p._searchKey=`${num} ${nm} ${addr}`.trim();
 
@@ -495,7 +528,7 @@ legend.onAdd=function(){
    '<b>土砂災害区域</b><br>'+
    '<span class="legend-swatch" style="background:#ffff00;border-color:#c9a900"></span>警戒区域（イエロー）<br>'+
    '<span class="legend-swatch" style="background:#ff0000;border-color:#b00020"></span>特別警戒区域（レッド）<br>'+
-   '<span class="legend-swatch" style="background:#00e5ff;border-color:#006064"></span>今回対象（6箇所）';
+   '<span class="legend-swatch" style="background:#00a8ff;border-color:#0047ab"></span>今回対象（6箇所）';
  return div;
 };
 
