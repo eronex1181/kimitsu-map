@@ -472,6 +472,7 @@ fetch('./A33-25_12Polygon.geojson',{cache:'no-store'})
 // 今回対象の既指定箇所調査（6箇所）：別GeoJSONレイヤー（青色）
 // 本体の土砂災害区域は通常の黄色/赤色のまま。
 // このレイヤーをONにした時だけ既指定箇所調査6箇所を青で重ねて表示。
+// 青レイヤー自身はクリックを受けず、下の黄色/赤色レイヤーへクリックを通します。
 // =====================================================
 fetch('./data/chiba_current_6targets.geojson',{cache:'no-store'})
 .then(r=>{
@@ -481,6 +482,7 @@ fetch('./data/chiba_current_6targets.geojson',{cache:'no-store'})
 .then(data=>{
  const current6=L.geoJSON(data,{
    pane:'markersPane',
+   interactive:false,
    bubblingMouseEvents:false,
    style:{
      color:'#0057B8',
@@ -489,14 +491,6 @@ fetch('./data/chiba_current_6targets.geojson',{cache:'no-store'})
      fillColor:'#00A8FF',
      fillOpacity:.50
    },
-   onEachFeature:(f,l)=>{
-     const p=f.properties||{};
-     const center=l.getBounds?l.getBounds().getCenter():null;
-     l.bindPopup(
-       `<b>今回対象の既指定箇所調査（6箇所）</b><br>`+
-       makePopup('区域情報',p,center)
-     );
-   }
  });
 
  // 初期OFF。チェックした時だけ青で重ねる。
