@@ -57,6 +57,12 @@ html,body{height:100%;margin:0}
 const map=L.map('map',{preferCanvas:true,maxZoom:19}).setView([35.50,140.13],9);
 
 map.createPane('csPane');       map.getPane('csPane').style.zIndex=410;
+
+// 地質図は背景として使い、クリックを邪魔しない専用Pane
+map.createPane('geologyPane');
+map.getPane('geologyPane').style.zIndex=415;
+map.getPane('geologyPane').style.pointerEvents='none';
+
 map.createPane('hazardPane');   map.getPane('hazardPane').style.zIndex=420;
 map.createPane('boundaryPane'); map.getPane('boundaryPane').style.zIndex=425;
 map.createPane('zonesPane');     map.getPane('zonesPane').style.zIndex=430;
@@ -111,6 +117,69 @@ const cs=L.tileLayer('./tiles/cs/{z}/{x}/{y}.webp',{
  attribution:'CS立体図：国土地理院DEM1Aを加工'
 });
 
+
+// =====================================================
+// 産総研 地質調査総合センター（GSJ） 地質図
+// 5万分の1：詳細図幅を1つのレイヤーグループとして表示
+// 20万分の1：シームレス地質図V2で範囲を補完
+// =====================================================
+
+const geo50kCommon={
+ layers:'geo_A,geo_L,gfd,geo_A_label',
+ format:'image/png',
+ transparent:true,
+ version:'1.1.1',
+ pane:'geologyPane',
+ opacity:.80,
+ attribution:'地質図：産総研 地質調査総合センター（GSJ）'
+};
+
+// 木更津 08-075
+const geo50kKisarazu=L.tileLayer.wms(
+ 'https://ows.gsj.jp/ows/geologicmap50k_08075',
+ geo50kCommon
+);
+
+// 姉崎 08-076
+const geo50kAnezaki=L.tileLayer.wms(
+ 'https://ows.gsj.jp/ows/geologicmap50k_08076',
+ geo50kCommon
+);
+
+// 富津 08-085
+const geo50kFuttsu=L.tileLayer.wms(
+ 'https://ows.gsj.jp/ows/geologicmap50k_08085',
+ geo50kCommon
+);
+
+// 鴨川 08-095
+const geo50kKamogawa=L.tileLayer.wms(
+ 'https://ows.gsj.jp/ows/geologicmap50k_08095',
+ geo50kCommon
+);
+
+// 周辺の詳細図幅を一括ON/OFF
+const geology50k=L.layerGroup([
+ geo50kKisarazu,
+ geo50kAnezaki,
+ geo50kFuttsu,
+ geo50kKamogawa
+]);
+
+// 20万分の1 日本シームレス地質図V2
+const geology200k=L.tileLayer.wms(
+ 'https://ows.gsj.jp/ows/seamlessv2',
+ {
+   layers:'seamlessV2_poly,seamlessV2_line,seamlessV2_poly_label',
+   format:'image/png',
+   transparent:true,
+   version:'1.1.1',
+   pane:'geologyPane',
+   opacity:.68,
+   attribution:'20万分の1日本シームレス地質図V2：産総研 GSJ'
+ }
+);
+
 // 水害6レイヤー
 const floodL2=L.tileLayer(
  'https://disaportaldata.gsi.go.jp/raster/01_flood_l2_shinsuishin_data/{z}/{x}/{y}.png',
@@ -148,6 +217,8 @@ const baseMaps={
 };
 
 const overlays={
+ '地質図 1/5万（詳細・GSJ）':geology50k,
+ '地質図 1/20万（シームレスV2・GSJ）':geology200k,
  '君津CS立体図（1m DEM）':cs,
  '① 洪水浸水想定区域（想定最大規模）':floodL2,
  '② 家屋倒壊等氾濫想定区域（氾濫流）':houseFlood,
@@ -587,6 +658,23 @@ async function loadHistoricalAdmin(){
 }
 
 loadHistoricalAdmin();
+
+
+// 地質図の簡易案内
+const geologyInfo=L.control({position:'bottomright'});
+geologyInfo.onAdd=function(){
+ const div=L.DomUtil.create('div','legend-box');
+ div.style.maxWidth='260px';
+ div.innerHTML=
+   '<b>地質図（GSJ）</b><br>'+
+   '1/5万：木更津・姉崎・富津・鴨川<br>'+
+   '面＋地質境界＋背斜向斜軸＋ラベル<br>'+
+   '<span style="font-size:11px;color:#555">※大多喜（08-086）は2026年刊行。現在は20万シームレスで補完。</span>';
+ return div;
+};
+// 初期状態では画面を圧迫しないため案内ボックスは表示しない。
+// 必要なら次行のコメントを外してください。
+// geologyInfo.addTo(map);
 
 // 土砂災害凡例
 const legend=L.control({position:'bottomright'});
