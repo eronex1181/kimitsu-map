@@ -1,799 +1,764 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>千葉県の土砂災害・水害情報をまとめたWeb地図</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kimitsu / Chiba Field Map</title>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-search@3.0.9/dist/leaflet-search.min.css">
+
 <style>
-:root {
-  --text:#222;
-  --sub:#666;
-  --line:#d9dde3;
-  --bg:#f5f7f9;
-  --card:#fff;
-  --accent:#1769aa;
-  --accent2:#0f4f83;
+html,body{height:100%;margin:0}
+#map{height:100%;background:#f3f3f3}
+.leaflet-control-layers{max-height:78vh;overflow:auto}
+.map-icon{
+ font-size:18px;width:30px;height:30px;line-height:30px;text-align:center;
+ background:white;border-radius:50%;border:2px solid #333;
+ box-shadow:0 2px 5px rgba(0,0,0,.3)
 }
-* { box-sizing:border-box; }
-body {
-  margin:0;
-  background:transparent;
-  color:var(--text);
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
-  line-height:1.9;
+.city-label{
+ background:transparent;border:none;box-shadow:none;color:#37474f;
+ font-size:12px;font-weight:bold;
+ text-shadow:1px 1px 0 #fff,-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff,0 0 4px #fff;
+ white-space:nowrap
 }
-article {
-  max-width:1240px;
-  margin:12px auto;
-  background:transparent;
-  padding:28px 24px 40px;
-  box-shadow:none;
+.search-tag{
+ display:inline-block;margin:6px;padding:2px 8px;border-radius:999px;
+ font-size:12px;color:#fff;background:#e53935;font-weight:bold;white-space:nowrap
 }
-h1 {
-  font-size:30px;
-  line-height:1.45;
-  margin:0 0 12px;
+#coord{
+ position:absolute;z-index:1000;left:10px;bottom:10px;
+ background:rgba(255,255,255,.9);padding:4px 7px;border-radius:4px;font-size:12px
 }
-.lead {
-  color:#444;
-  font-size:17px;
-  margin-bottom:22px;
+.legend-box{
+ background:rgba(255,255,255,.95);padding:8px 10px;border-radius:5px;
+ box-shadow:0 1px 5px rgba(0,0,0,.35);font-size:12px;line-height:20px
 }
-h2 {
-  font-size:22px;
-  margin:42px 0 14px;
-  padding-bottom:8px;
-  border-bottom:3px solid #e8edf3;
-}
-h3 {
-  font-size:18px;
-  margin:30px 0 8px;
-}
-p { margin:0 0 16px; }
-ul {
-  padding-left:1.5em;
-  margin:10px 0 18px;
-}
-li { margin:5px 0; }
-strong { font-weight:700; }
-.mapbox {
-  margin:26px 0 34px;
-  border:1px solid var(--line);
-  border-radius:6px;
-  overflow:hidden;
-  background:#fff;
-}
-.maphead {
-  display:flex;
-  justify-content:space-between;
-  gap:12px;
-  align-items:center;
-  padding:12px 14px;
-  background:#f0f4f8;
-  border-bottom:1px solid var(--line);
-}
-.maphead strong { font-size:15px; }
-.mapframe {
-  width:100%;
-  height:620px;
-  border:0;
-  display:block;
-}
-.zoom-btn {
-  appearance:none;
-  border:0;
-  border-radius:6px;
-  padding:9px 15px;
-  background:var(--accent);
-  color:#fff;
-  font-weight:700;
-  cursor:pointer;
-  white-space:nowrap;
-}
-.zoom-btn:hover { background:var(--accent2); }
-.note {
-  padding:14px 16px;
-  background:#f7f9fb;
-  border-left:4px solid #78909c;
-  margin:20px 0;
-  font-size:14px;
-}
-.rainbox {
-  padding:16px 18px;
-  background:#eef6fc;
-  border:1px solid #c9dfef;
-  border-radius:7px;
-  margin:18px 0 24px;
-}
-.layer {
-  margin:22px 0;
-  padding:16px 18px;
-  border:1px solid var(--line);
-  border-radius:7px;
-  background:#fff;
-}
-.layer h3 {
-  margin:0 0 8px;
-}
-.sources {
-  margin-top:34px;
-  padding-top:22px;
-  border-top:1px solid var(--line);
-  font-size:14px;
-}
-.sources ol {
-  padding-left:1.6em;
-}
-.sources a {
-  color:#145d96;
-  word-break:break-all;
-}
-.small {
-  color:var(--sub);
-  font-size:13px;
-}
-/* fullscreen modal */
-#mapModal {
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.82);
-  z-index:99999;
-  display:none;
-  padding:18px;
-}
-#mapModal.open { display:flex; }
-.modal-inner {
-  width:100%;
-  height:100%;
-  background:#fff;
-  border-radius:6px;
-  overflow:hidden;
-  display:flex;
-  flex-direction:column;
-}
-.modal-bar {
-  min-height:50px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:8px 12px;
-  border-bottom:1px solid #ddd;
-  background:#f7f7f7;
-}
-.modal-map {
-  width:100%;
-  flex:1;
-  border:0;
-}
-.close-btn {
-  border:0;
-  padding:8px 14px;
-  border-radius:5px;
-  background:#444;
-  color:#fff;
-  cursor:pointer;
-  font-weight:700;
-}
-@media (max-width:700px) {
-  article {
-    margin:0;
-    padding:18px 12px 28px;
-    box-shadow:none;
-  }
-  h1 { font-size:24px; }
-  h2 { font-size:20px; }
-  .mapframe { height:470px; }
-  .maphead {
-    align-items:flex-start;
-    flex-direction:column;
-  }
-  .zoom-btn { width:100%; }
+.legend-swatch{
+ display:inline-block;width:18px;height:12px;margin-right:6px;vertical-align:-1px;border:2px solid
 }
 
-.kiki-panel{
-  margin:24px 0;
-  padding:20px;
-  background:#fff;
-  border:1px solid #d7dde4;
-  border-radius:8px;
+.locate-control{
+ background:#fff;
+ width:38px;
+ height:38px;
+ border-radius:4px;
+ box-shadow:0 1px 5px rgba(0,0,0,.35);
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ cursor:pointer;
+ font-size:20px;
+ user-select:none;
 }
-.kiki-grid{
-  display:grid;
-  grid-template-columns:repeat(5,minmax(90px,1fr));
-  gap:8px;
-  margin:16px 0 20px;
-}
-.kiki-level{
-  border-radius:6px;
-  padding:12px 8px;
-  text-align:center;
-  border:1px solid rgba(0,0,0,.15);
-  font-weight:700;
-}
-.kiki-level small{
-  display:block;
-  margin-top:5px;
-  font-weight:400;
-  line-height:1.45;
-}
-.kiki-none{background:#f7f7f7;color:#333}
-.kiki-yellow{background:#fff44f;color:#333}
-.kiki-red{background:#e53935;color:#fff}
-.kiki-purple{background:#9c27b0;color:#fff}
-.kiki-black{background:#111;color:#fff}
-.kiki-table{
-  width:100%;
-  border-collapse:collapse;
-  margin:16px 0 20px;
-  font-size:14px;
-}
-.kiki-table th,.kiki-table td{
-  border:1px solid #ccd3db;
-  padding:9px 10px;
-  vertical-align:top;
-}
-.kiki-table th{background:#eef2f6}
-.kiki-buttons{
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px;
-  margin:18px 0;
-}
-.kiki-button{
-  display:inline-block;
-  background:#1769aa;
-  color:#fff !important;
-  text-decoration:none;
-  font-weight:700;
-  padding:10px 16px;
-  border-radius:6px;
-}
-.kiki-button.secondary{background:#536b78}
-.kiki-figure{
-  margin:22px 0;
-  padding:12px;
-  background:#f7f9fb;
-  border:1px solid #d8dee5;
-  border-radius:7px;
-  text-align:center;
-}
-.kiki-figure img{
-  max-width:100%;
-  height:auto;
-  display:block;
-  margin:0 auto 8px;
-}
-.kiki-figure figcaption{
-  font-size:12px;
-  color:#666;
-  line-height:1.6;
-}
-@media(max-width:700px){
-  .kiki-grid{grid-template-columns:1fr 1fr}
-  .kiki-level:last-child{grid-column:1 / -1}
-  .kiki-table{font-size:12px}
-  .kiki-table th,.kiki-table td{padding:7px 6px}
+.locate-control:hover{background:#f4f4f4}
+.locate-control.active{background:#e3f2fd}
+.locate-dot{
+ width:16px;height:16px;border-radius:50%;
+ background:#1976d2;border:3px solid #fff;
+ box-shadow:0 0 0 2px #1976d2,0 1px 5px rgba(0,0,0,.45);
 }
 
 </style>
 </head>
 <body>
+<div id="map"></div>
+<div id="coord"></div>
 
-<article>
-  <h1>千葉県の土砂災害・水害情報をまとめたWeb地図</h1>
-  <p class="lead">
-    千葉県の土砂災害関係の情報を中心に、洪水・内水・高潮・津波、
-    昔の地図、地形、地質などを一つの画面で確認できるWeb地図を作成しました。
-  </p>
-
-  <div class="mapbox">
-    <div class="maphead">
-      <strong>千葉県 土砂災害・防災Webマップ</strong>
-      <button class="zoom-btn" type="button" onclick="openBigMap()">地図を大きく表示</button>
-    </div>
-    <iframe
-      class="mapframe"
-      src="https://eronex1181.github.io/kimitsu-map/"
-      loading="lazy"
-      allowfullscreen
-      title="千葉県 土砂災害・防災Webマップ"></iframe>
-  </div>
-
-  <div class="note">
-    <strong>スマートフォンでの現在地表示：</strong>
-    地図左上の「◎」ボタンを押すと、端末の位置情報を利用して現在地を表示できます。
-    初回はブラウザから位置情報の利用許可を求められます。現在地は青いマーカーと位置精度の円で表示されます。
-  </div>
-
-  <h2>土砂災害防止法に関する情報を中心に表示</h2>
-
-  <p>
-    地図の中心となるのは、土砂災害防止法に基づく
-    <strong>土砂災害警戒区域（イエローゾーン）</strong>と
-    <strong>土砂災害特別警戒区域（レッドゾーン）</strong>です。
-  </p>
-
-  <p>
-    区域をクリックすると、箇所番号、箇所名、市町村などの属性を確認できます。
-    また、Googleマップやストリートビューへのリンクを用意しており、
-    地図上の区域と現在の道路・建物の様子を簡単に見比べられるようにしています。
-  </p>
-
-  <div class="note">
-    <strong>ストリートビューについて：</strong>
-    通常は地図上でクリックした位置を基準にストリートビューを開きますが、
-    箇所検索から開いた場合など、一部ではポリゴンの中心付近を基準とすることがあります。
-    そのため、対象区域が道路から離れている場合や、Google Street Viewが整備されていない道路・山間部では、
-    ストリートビューが表示されなかったり、少し離れた道路が表示されたりすることがあります。
-  </div>
-
-  <p>
-    今回対象となっている既指定箇所調査の6箇所については別レイヤーにしてあり、
-    <strong>「今回対象の既指定箇所調査（6箇所）」</strong>をONにすると青色で強調表示されます。
-    青色は対象箇所を見つけやすくするための表示で、元のイエローゾーン・レッドゾーンの区分自体は変更していません。
-  </p>
-
-  <p>
-    そのほか、砂防指定地、地すべり防止区域、急傾斜地崩壊危険区域、
-    盛土規制区域なども個別にON・OFFできます。
-    土砂災害警戒区域だけを見るのではなく、同じ場所にどのような指定区域が重なっているかを見ることができます。
-  </p>
-
-  <h2>最近の大雨を踏まえて、水害情報を多めに追加</h2>
-
-  <p>
-    今回の地図では、水害関係のレイヤーをかなり多めに入れています。
-    2026年8月13日には千葉県内で局地的に非常に強い雨となり、
-    千葉市中央区で1時間115.0mm、佐倉市で97.0mm、館山市で94.5mmを観測し、
-    いずれも観測史上1位を更新しました。
-  </p>
-
-  <div class="rainbox">
-    河川の洪水だけでなく、短時間強雨による内水、河岸侵食、高潮など、
-    <strong>「雨が降ったときに起こり得る水の災害を種類ごとに切り替えて見る」</strong>
-    ことを意識した構成にしています。
-  </div>
-
-  <p>
-    水害関係は、国土地理院「重ねるハザードマップ」で配信されているデータを利用し、
-    次の6種類を独立したレイヤーとして表示できます。
-  </p>
-
-  <div class="layer">
-    <h3>① 洪水浸水想定区域（想定最大規模）</h3>
-    <p>
-      河川が氾濫した場合に、どこまで浸水する可能性があるかを見るためのレイヤーです。
-      想定最大規模の降雨を前提とした浸水想定区域を表示しています。
-    </p>
-    <p>
-      土砂災害警戒区域と重ねると、斜面側には土砂災害、
-      その下の低地には洪水浸水というように、異なる災害リスクが同じ地域に存在することも確認できます。
-    </p>
-  </div>
-
-  <div class="layer">
-    <h3>② 家屋倒壊等氾濫想定区域（氾濫流）</h3>
-    <p>
-      洪水時の強い流れによって、一般的な木造家屋などが流失・倒壊するおそれのある範囲を見る情報です。
-      単純な「浸水の深さ」だけではなく、<strong>水の勢いによる危険性</strong>を見ることができます。
-    </p>
-  </div>
-
-  <div class="layer">
-    <h3>③ 家屋倒壊等氾濫想定区域（河岸侵食）</h3>
-    <p>
-      洪水時に川岸が削られる河岸侵食によって、家屋が危険になる可能性のある範囲を表示します。
-      河川沿いを見る場合は、洪水浸水想定区域、氾濫流、河岸侵食を切り替えて見ると、
-      同じ洪水でも危険性の種類が違うことが分かります。
-    </p>
-  </div>
-
-  <div class="layer">
-    <h3>④ 内水（雨水出水）浸水想定区域</h3>
-    <p>
-      短時間に大量の雨が降り、下水道や水路などの排水能力を超えたときに発生する
-      <strong>内水氾濫</strong>の想定区域です。
-    </p>
-    <p>
-      大きな河川から離れていても浸水する場合があるため、
-      最近のような局地的な豪雨を見るうえでは洪水とは分けて確認したい情報です。
-      低地や道路、昔の谷地形などと重ねて見るのにも向いています。
-    </p>
-  </div>
-
-  <div class="layer">
-    <h3>⑤ 高潮浸水想定区域</h3>
-    <p>
-      台風や発達した低気圧によって海面が上昇した際に、
-      沿岸部でどこまで浸水が想定されるかを見るレイヤーです。
-      東京湾側・太平洋側の沿岸地域を見る場合に、洪水とは別の海側からのリスクとして確認できます。
-    </p>
-  </div>
-
-  <div class="layer">
-    <h3>⑥ 津波浸水想定</h3>
-    <p>
-      津波による浸水想定区域です。
-      大雨とは別の災害ですが、千葉県全体の防災情報を同じ地図で見るために追加しています。
-      沿岸部では洪水・高潮・津波を切り替えて比較できます。
-    </p>
-  </div>
-
-  <div class="note">
-    これらのレイヤーは、現在の降雨や実際の浸水状況を示すリアルタイム情報ではありません。
-    実際の大雨・災害時には、気象庁や自治体などが発表する最新情報とあわせて確認する必要があります。
-  </div>
-
-  
-  <h2>「雨の強さ」と「キキクルの危険度」は別のもの</h2>
-
-  <p>
-    大雨のニュースでは「警戒レベル4」「警戒レベル5」といった言葉をよく目にします。
-    ここで注意したいのは、<strong>1時間に何mm降ったかという雨そのものの強さと、
-    キキクルが示す災害の危険度は同じものではない</strong>という点です。
-  </p>
-
-  <p>
-    気象庁のキキクル（危険度分布）は、単純な雨量だけではなく、
-    土砂災害では土壌雨量指数、浸水では表面雨量指数、洪水では流域雨量指数などを使い、
-    「その場所で災害が起こる危険性がどこまで高まっているか」を地図上に色分けして表示します。
-  </p>
-
-  <div class="rainbox">
-    <strong>令和8年5月29日から「レベル4土砂災害危険警報」へ</strong><br>
-    令和8年5月29日から、新しい防災気象情報の運用が始まりました。
-    これまでの土砂災害防止法に基づく「土砂災害警戒情報」は、
-    気象業務法に基づく「土砂崩れに関する警報」と一体として、
-    <strong>「レベル4土砂災害危険警報」</strong>という名称で通知・周知されるようになりました。
-    <br><br>
-    土砂災害防止対策基本指針は令和8年5月21日に変更され、5月29日に施行されています。
-    ただし、名称が変わっても、土砂災害防止法に基づく
-    <strong>避難に役立てるための「土砂災害警戒情報」としての性質は変わりません。</strong>
-    市町村が避難指示を判断する際や、住民が自主的に避難を判断する際の重要な情報です。
-  </div>
-
-  <div class="kiki-panel">
-    <h3 style="margin-top:0">キキクルの危険度と警戒レベル相当</h3>
-
-    
-
-    <p>
-      特に土砂キキクルでは、気象庁は<strong>一般の方は遅くとも「危険」（紫）が出現した時点で、
-      土砂災害警戒区域等の外の安全な場所へ避難を開始することが重要</strong>としています。
-      「災害切迫」（黒）は避難開始の目安ではなく、すでに非常に危険な段階です。
-    </p>
-  </div>
-
-  <h3>土砂・浸水・洪水の3種類のキキクル</h3>
-
-  <p>
-    キキクルには大きく分けて、<strong>土砂キキクル、浸水キキクル、洪水キキクル</strong>があります。
-    土砂キキクルは斜面崩壊や土石流などの危険度、浸水キキクルは短時間強雨による浸水害の危険度、
-    洪水キキクルは河川の洪水危険度を見るための情報です。
-  </p>
-
-  <p>
-    今回作成したWeb地図は「どこが土砂災害警戒区域か」「洪水や内水の想定区域はどこか」を
-    平常時にも確認できる地図です。一方、キキクルは<strong>その時点で危険度がどこまで高まっているか</strong>を見る情報です。
-    大雨の際は、このWeb地図で危険な場所を確認しながら、キキクルで現在の危険度を確認するという使い方ができます。
-  </p>
-
-  <p>
-    千葉県では、県の砂防部局が公開している
-    <strong>「千葉県 土砂災害危険度情報」</strong>でも、
-    土砂災害の危険度を地図上で確認できます。
-    国土交通省の「レベル4土砂災害危険警報」の都道府県リンク一覧からも千葉県のページへ移動できます。
-  </p>
-
-  <div class="kiki-buttons">
-    <a class="kiki-button"
-       href="https://www.jma.go.jp/bosai/risk/"
-       target="_blank" rel="noopener">気象庁 キキクルを開く</a>
-
-    <a class="kiki-button"
-       href="https://dosyabo.bousai.pref.chiba.lg.jp/chibaDosya/web/top/"
-       target="_blank" rel="noopener">千葉県 土砂災害危険度情報</a>
-
-    <a class="kiki-button secondary"
-       href="https://www.mlit.go.jp/mizukokudo/sabo/sabo_ken_link.html"
-       target="_blank" rel="noopener">国交省 レベル4土砂災害危険警報</a>
-
-    <a class="kiki-button secondary"
-       href="https://www.jma.go.jp/jma/kishou/know/bosai/doshakeikai.html"
-       target="_blank" rel="noopener">土砂キキクルの詳しい説明</a>
-
-    <a class="kiki-button secondary"
-       href="https://www.jma.go.jp/jma/kishou/know/bosai/riskmap.html"
-       target="_blank" rel="noopener">キキクルの仕組みを見る</a>
-  </div>
-
-  <p>
-    警戒レベルごとの色・意味・行動の目安については、
-    下の<strong>気象庁公式の土砂キキクル説明図</strong>が分かりやすいため、
-    こちらを参考にしてください。
-  </p>
-
-  <figure class="kiki-figure">
-    <a href="https://www.jma.go.jp/jma/kishou/know/bosai/doshakeikai.html"
-       target="_blank" rel="noopener">
-      <img src="https://www.jma.go.jp/jma/kishou/know/bosai/images/dosha_riyou.png"
-           alt="気象庁 土砂キキクルの利用方法・警戒レベル相当の説明画像"
-           loading="lazy">
-    </a>
-    <figcaption>
-      土砂キキクルの利用イメージ（出典：気象庁）。画像をクリックすると気象庁の解説ページを開きます。
-      ※気象庁側の画像URL変更等により表示されなくなる場合があります。
-    </figcaption>
-  </figure>
-
-  <h3>1時間雨量は「雨そのものの強さ」を見る目安</h3>
-
-  <p>
-    一方、1時間雨量は雨そのものの強さを表す目安です。
-    気象庁では、30～50mm/hを「激しい雨」、50～80mm/hを「非常に激しい雨」、
-    80mm/h以上を「猛烈な雨」と表現しています。
-  </p>
-
-  <table class="kiki-table">
-    <thead>
-      <tr>
-        <th>1時間雨量</th>
-        <th>気象庁の表現</th>
-        <th>雨のイメージ</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr><td>10～20mm未満</td><td>やや強い雨</td><td>ザーザーと降る</td></tr>
-      <tr><td>20～30mm未満</td><td>強い雨</td><td>どしゃ降り</td></tr>
-      <tr><td>30～50mm未満</td><td>激しい雨</td><td>バケツをひっくり返したように降る</td></tr>
-      <tr><td>50～80mm未満</td><td>非常に激しい雨</td><td>滝のように降る。車の運転は危険になる</td></tr>
-      <tr><td>80mm以上</td><td>猛烈な雨</td><td>息苦しくなるような圧迫感や恐怖を感じるほどの雨</td></tr>
-    </tbody>
-  </table>
-
-  <div class="note">
-    <strong>重要：</strong>
-    「1時間80mmを超えたから警戒レベル5」という関係ではありません。
-    雨量は雨そのものの強さ、キキクルはその雨によって災害の危険度がどこまで高まっているかを示す情報です。
-    同じ雨量でも地形、地質、それまでに降った雨、河川流域などによって危険度は異なります。
-  </div>
-
-<h2>現在の地図だけでなく、昔の地図も表示</h2>
-
-  <p>
-    背景地図は国土地理院の淡色地図、標準地図、航空写真から切り替えられます。
-    さらに「今昔マップ on the web」の関東版を追加し、
-    1894～1915年、1928～1945年、1972～1982年、1988～2008年の地図も表示できます。
-  </p>
-
-  <p>
-    現在は住宅地や道路になっている場所が、以前はどのような土地だったのか、
-    道路や集落の位置がどのように変わったのかなどを、現在の地図と切り替えながら見ることができます。
-  </p>
-
-  <p>
-    また、1920年頃の旧市町村境界も表示できるようにしています。
-    現在とは異なる昔の市町村名や行政区域を見るときの参考になります。
-  </p>
-
-  <h2>君津周辺では1mDEMから作成したCS立体図</h2>
-
-  <p>
-    君津周辺については、国土地理院の1mメッシュ標高データ（DEM1A）から作成した
-    <strong>CS立体図</strong>も表示できます。
-  </p>
-
-  <p>
-    通常の地形図や航空写真とは異なり、小さな谷、尾根、地形の凹凸などが見やすくなります。
-    1mDEMを利用できる範囲から作成しているため、CS立体図については現在、君津周辺を中心とした表示です。
-  </p>
-
-  <h2>地質図も重ねて表示</h2>
-
-  <p>
-    産業技術総合研究所・地質調査総合センター（GSJ）の
-    <strong>20万分の1日本シームレス地質図V2</strong>も表示できるようにしています。
-  </p>
-
-  <p>
-    千葉県全体を連続して見ることができるため、
-    地形や土砂災害区域と重ねながら、地域ごとの地質の違いを大まかに確認できます。
-  </p>
-
-  <h2>避難場所やバス停も表示</h2>
-
-  <p>
-    千葉県内の避難所・指定緊急避難場所、バス停もレイヤーとして表示できます。
-    防災区域だけではなく、周辺にどのような施設があるのかを同じ画面で見るための補助情報として追加しています。
-  </p>
-
-  <h2>この地図でできること</h2>
-
-  <p>
-    このWeb地図の特徴は、個々の情報を見ることよりも、
-    <strong>同じ場所について複数の情報を簡単に切り替えたり重ねたりできること</strong>です。
-  </p>
-
-  <ul>
-    <li>土砂災害警戒区域・特別警戒区域を確認する</li>
-    <li>箇所番号や箇所名から対象区域を検索する</li>
-    <li>Googleマップやストリートビューで周辺の状況を見る</li>
-    <li>土砂災害区域と洪水・内水などの水害情報を重ねる</li>
-    <li>砂防指定地など、他の指定区域との位置関係を見る</li>
-    <li>航空写真と地形図を切り替えて比較する</li>
-    <li>今昔マップで昔と現在の土地の様子を比較する</li>
-    <li>CS立体図で細かな地形を見る</li>
-    <li>地質図と地形・土砂災害区域を重ねて見る</li>
-    <li>避難場所など周辺施設との位置関係を見る</li>
-  </ul>
-
-  <p>
-    特に大雨の際には、土砂災害だけ、洪水だけ、と一つの情報を見るのではなく、
-    洪水・内水・河岸侵食などを必要に応じて重ねることで、その場所を別の視点から確認できます。
-  </p>
-
-  <p>
-    公開されている防災・地形・地質情報をできるだけ一つの画面にまとめ、
-    必要なレイヤーだけを選んで見ることができる地図にしています。
-  </p>
-
-  <div class="sources">
-    <h2>出典・参考資料</h2>
-    <ol>
-      <li>
-        国土交通省「土砂災害警戒区域等の指定状況等・土砂災害防止法の概要」<br>
-        <a href="https://www.mlit.go.jp/mizukokudo/sabo/linksinpou.html" target="_blank" rel="noopener">
-          https://www.mlit.go.jp/mizukokudo/sabo/linksinpou.html
-        </a>
-      </li>
-      <li>
-        国土地理院「ハザードマップポータルサイト・オープンデータ配信」<br>
-        <a href="https://disaportal.gsi.go.jp/hazardmap/copyright/opendata.html" target="_blank" rel="noopener">
-          https://disaportal.gsi.go.jp/hazardmap/copyright/opendata.html
-        </a>
-      </li>
-      <li>
-        国土地理院「ハザードマップポータルサイト・各種データの出典と掲載数」<br>
-        <a href="https://disaportal.gsi.go.jp/hazardmapportal/hazardmap/copyright/copyright_data.html" target="_blank" rel="noopener">
-          https://disaportal.gsi.go.jp/hazardmapportal/hazardmap/copyright/copyright_data.html
-        </a>
-      </li>
-      <li>
-        気象庁「2026年8月13日の1時間降水量（千葉県）」<br>
-        <a href="https://www.data.jma.go.jp/stats/mdrr/periodstat/20260814a/20260813/24/pre1h_mxarea00.html" target="_blank" rel="noopener">
-          https://www.data.jma.go.jp/stats/mdrr/periodstat/20260814a/20260813/24/pre1h_mxarea00.html
-        </a>
-      </li>
-      <li>
-        国土地理院「基盤地図情報（数値標高モデル）」<br>
-        <a href="https://service.gsi.go.jp/kiban/app/help/" target="_blank" rel="noopener">
-          https://service.gsi.go.jp/kiban/app/help/
-        </a>
-      </li>
-      <li>
-        今昔マップ on the web（埼玉大学教育学部 谷謙二）<br>
-        <a href="https://ktgis.net/kjmapw/index.html" target="_blank" rel="noopener">
-          https://ktgis.net/kjmapw/index.html
-        </a>
-      </li>
-      <li>
-        今昔マップ「タイルマップサービス」<br>
-        <a href="https://ktgis.net/kjmapw/tilemapservice.html" target="_blank" rel="noopener">
-          https://ktgis.net/kjmapw/tilemapservice.html
-        </a>
-      </li>
-      <li>
-        歴史的行政区域データセットβ版（ROIS-DS人文学オープンデータ共同利用センター）<br>
-        <a href="https://geoshape.ex.nii.ac.jp/city/" target="_blank" rel="noopener">
-          https://geoshape.ex.nii.ac.jp/city/
-        </a>
-      </li>
-      <li>
-        産総研 地質調査総合センター「20万分の1日本シームレス地質図V2」<br>
-        <a href="https://gbank.gsj.jp/seamless/v2/viewer2/" target="_blank" rel="noopener">
-          https://gbank.gsj.jp/seamless/v2/viewer2/
-        </a>
-      </li>
-      <li>
-        産総研 地質調査総合センター「20万分の1日本シームレス地質図V2 WMS」<br>
-        <a href="https://gbank.gsj.jp/owscontents/contents/seamlessv2_detail.html" target="_blank" rel="noopener">
-          https://gbank.gsj.jp/owscontents/contents/seamlessv2_detail.html
-        </a>
-      </li>
-    
-      <li>
-        国土交通省「レベル4土砂災害危険警報」<br>
-        <a href="https://www.mlit.go.jp/mizukokudo/sabo/sabo_ken_link.html" target="_blank" rel="noopener">
-          https://www.mlit.go.jp/mizukokudo/sabo/sabo_ken_link.html
-        </a>
-      </li>
-      <li>
-        国土交通省「土砂災害防止対策基本指針の主な変更点（令和8年5月29日施行）」<br>
-        <a href="https://www.mlit.go.jp/mizukokudo/sabo/content/002002167.pdf" target="_blank" rel="noopener">
-          https://www.mlit.go.jp/mizukokudo/sabo/content/002002167.pdf
-        </a>
-      </li>
-      <li>
-        千葉県「土砂災害危険度情報」<br>
-        <a href="https://dosyabo.bousai.pref.chiba.lg.jp/chibaDosya/web/top/" target="_blank" rel="noopener">
-          https://dosyabo.bousai.pref.chiba.lg.jp/chibaDosya/web/top/
-        </a>
-      </li>
-      <li>
-        気象庁「キキクル（危険度分布）」<br>
-        <a href="https://www.jma.go.jp/bosai/risk/" target="_blank" rel="noopener">
-          https://www.jma.go.jp/bosai/risk/
-        </a>
-      </li>
-      <li>
-        気象庁「キキクル」解説<br>
-        <a href="https://www.jma.go.jp/jma/kishou/know/bosai/riskmap.html" target="_blank" rel="noopener">
-          https://www.jma.go.jp/jma/kishou/know/bosai/riskmap.html
-        </a>
-      </li>
-      <li>
-        気象庁「土砂キキクル」<br>
-        <a href="https://www.jma.go.jp/jma/kishou/know/bosai/doshakeikai.html" target="_blank" rel="noopener">
-          https://www.jma.go.jp/jma/kishou/know/bosai/doshakeikai.html
-        </a>
-      </li>
-      <li>
-        気象庁「雨の強さと降り方」<br>
-        <a href="https://www.jma.go.jp/jma/kishou/know/yougo_hp/amehyo.html" target="_blank" rel="noopener">
-          https://www.jma.go.jp/jma/kishou/know/yougo_hp/amehyo.html
-        </a>
-      </li>
-</ol>
-    <p class="small">
-      ※各データの内容・更新時期・利用条件は、それぞれの公開元の最新情報をご確認ください。
-      本Web地図は複数の公開情報を重ねて確認するためのものであり、災害時の避難判断等は、
-      気象庁、自治体、国・県などが発表する最新情報を優先してください。
-    </p>
-  </div>
-</article>
-
-<div id="mapModal" role="dialog" aria-modal="true" aria-label="拡大地図">
-  <div class="modal-inner">
-    <div class="modal-bar">
-      <strong>千葉県 土砂災害・防災Webマップ</strong>
-      <button class="close-btn" type="button" onclick="closeBigMap()">閉じる</button>
-    </div>
-    <iframe
-      id="bigMapFrame"
-      class="modal-map"
-      src="about:blank"
-      allowfullscreen
-      title="拡大表示 地図"></iframe>
-  </div>
-</div>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet-search@3.0.9/dist/leaflet-search.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
 
 <script>
-const MAP_URL = 'https://eronex1181.github.io/kimitsu-map/';
+// 千葉県全体
+const map=L.map('map',{preferCanvas:true,maxZoom:19}).setView([35.50,140.13],9);
 
-function openBigMap() {
-  const modal = document.getElementById('mapModal');
-  const frame = document.getElementById('bigMapFrame');
-  frame.src = MAP_URL;
-  modal.classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
+map.createPane('csPane');       map.getPane('csPane').style.zIndex=410;
 
-function closeBigMap() {
-  const modal = document.getElementById('mapModal');
-  const frame = document.getElementById('bigMapFrame');
-  modal.classList.remove('open');
-  frame.src = 'about:blank';
-  document.body.style.overflow = '';
-}
+// 地質図は背景として使い、クリックを邪魔しない専用Pane
+map.createPane('geologyPane');
+map.getPane('geologyPane').style.zIndex=415;
+map.getPane('geologyPane').style.pointerEvents='none';
 
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') closeBigMap();
+map.createPane('hazardPane');   map.getPane('hazardPane').style.zIndex=420;
+map.createPane('boundaryPane'); map.getPane('boundaryPane').style.zIndex=425;
+map.createPane('zonesPane');     map.getPane('zonesPane').style.zIndex=430;
+map.createPane('dosyaPane');     map.getPane('dosyaPane').style.zIndex=440;
+
+// 青い今回対象は「見た目だけ」の専用Pane。
+// Pane全体でマウスイベントを無効化するため、クリックは必ず下の黄/赤レイヤーへ通る。
+map.createPane('highlightPane');
+map.getPane('highlightPane').style.zIndex=445;
+map.getPane('highlightPane').style.pointerEvents='none';
+
+map.createPane('markersPane');   map.getPane('markersPane').style.zIndex=450;
+
+// 背景
+const gsiPale=L.tileLayer(
+ 'https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',
+ {maxZoom:18,attribution:'© 国土地理院'}
+).addTo(map);
+
+const gsiStd=L.tileLayer(
+ 'https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png',
+ {maxZoom:18,attribution:'© 国土地理院'}
+);
+
+const gsiPhoto=L.tileLayer(
+ 'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg',
+ {maxZoom:18,attribution:'© 国土地理院'}
+);
+
+// 今昔マップ 関東
+const konjaku00=L.tileLayer(
+ 'https://ktgis.net/kjmapw/kjtilemap/kanto/00/{z}/{x}/{-y}.png',
+ {minZoom:8,maxNativeZoom:15,maxZoom:19,attribution:'© 今昔マップ on the web'}
+);
+const konjaku01=L.tileLayer(
+ 'https://ktgis.net/kjmapw/kjtilemap/kanto/01/{z}/{x}/{-y}.png',
+ {minZoom:8,maxNativeZoom:15,maxZoom:19,attribution:'© 今昔マップ on the web'}
+);
+const konjaku02=L.tileLayer(
+ 'https://ktgis.net/kjmapw/kjtilemap/kanto/02/{z}/{x}/{-y}.png',
+ {minZoom:8,maxNativeZoom:15,maxZoom:19,attribution:'© 今昔マップ on the web'}
+);
+const konjaku03=L.tileLayer(
+ 'https://ktgis.net/kjmapw/kjtilemap/kanto/03/{z}/{x}/{-y}.png',
+ {minZoom:8,maxNativeZoom:15,maxZoom:19,attribution:'© 今昔マップ on the web'}
+);
+
+// 君津1mDEM由来CS（君津周辺のみ）
+const kimitsuBounds=[[35.1662899944,139.8749059525],[35.3336791683,140.1256305681]];
+const cs=L.tileLayer('./tiles/cs/{z}/{x}/{y}.webp',{
+ minZoom:10,maxNativeZoom:16,maxZoom:19,opacity:.70,bounds:kimitsuBounds,pane:'csPane',
+ attribution:'CS立体図：国土地理院DEM1Aを加工'
 });
 
-document.getElementById('mapModal').addEventListener('click', function(e) {
-  if (e.target === this) closeBigMap();
+
+// =====================================================
+// 産総研 地質調査総合センター（GSJ） 地質図
+// 20万分の1：日本シームレス地質図V2
+// =====================================================
+
+// 20万分の1 日本シームレス地質図V2
+const geology200k=L.tileLayer.wms(
+ 'https://ows.gsj.jp/ows/seamlessv2',
+ {
+   layers:'seamlessV2_poly,seamlessV2_line,seamlessV2_poly_label',
+   format:'image/png',
+   transparent:true,
+   version:'1.1.1',
+   pane:'geologyPane',
+   opacity:.68,
+   attribution:'20万分の1日本シームレス地質図V2：産総研 GSJ'
+ }
+);
+
+// 水害6レイヤー
+const floodL2=L.tileLayer(
+ 'https://disaportaldata.gsi.go.jp/raster/01_flood_l2_shinsuishin_data/{z}/{x}/{y}.png',
+ {minZoom:2,maxNativeZoom:17,maxZoom:19,opacity:.70,pane:'hazardPane',attribution:'© 国土地理院'}
+);
+const houseFlood=L.tileLayer(
+ 'https://disaportaldata.gsi.go.jp/raster/01_flood_l2_kaokutoukai_hanran_data/{z}/{x}/{y}.png',
+ {minZoom:4,maxNativeZoom:17,maxZoom:19,opacity:.75,pane:'hazardPane',attribution:'© 国土地理院'}
+);
+const houseErosion=L.tileLayer(
+ 'https://disaportaldata.gsi.go.jp/raster/01_flood_l2_kaokutoukai_kagan_data/{z}/{x}/{y}.png',
+ {minZoom:4,maxNativeZoom:17,maxZoom:19,opacity:.75,pane:'hazardPane',attribution:'© 国土地理院'}
+);
+const inlandFlood=L.tileLayer(
+ 'https://disaportaldata.gsi.go.jp/raster/02_naisui_data/{z}/{x}/{y}.png',
+ {minZoom:2,maxNativeZoom:17,maxZoom:19,opacity:.70,pane:'hazardPane',attribution:'© 国土地理院'}
+);
+const stormSurge=L.tileLayer(
+ 'https://disaportaldata.gsi.go.jp/raster/03_hightide_l2_shinsuishin_data/{z}/{x}/{y}.png',
+ {minZoom:2,maxNativeZoom:17,maxZoom:19,opacity:.70,pane:'hazardPane',attribution:'© 国土地理院'}
+);
+const tsunami=L.tileLayer(
+ 'https://disaportaldata.gsi.go.jp/raster/04_tsunami_newlegend_data/{z}/{x}/{y}.png',
+ {minZoom:2,maxNativeZoom:17,maxZoom:19,opacity:.70,pane:'hazardPane',attribution:'© 国土地理院'}
+);
+
+const baseMaps={
+ '国土地理院（淡色）':gsiPale,
+ '国土地理院（標準）':gsiStd,
+ '国土地理院（航空写真）':gsiPhoto,
+ '今昔マップ 関東（1894～1915年）':konjaku00,
+ '今昔マップ 関東（1928～1945年）':konjaku01,
+ '今昔マップ 関東（1972～1982年）':konjaku02,
+ '今昔マップ 関東（1988～2008年）':konjaku03
+};
+
+const overlays={
+ '地質図 1/20万（シームレスV2・GSJ）':geology200k,
+ '君津CS立体図（1m DEM）':cs,
+ '① 洪水浸水想定区域（想定最大規模）':floodL2,
+ '② 家屋倒壊等氾濫想定区域（氾濫流）':houseFlood,
+ '③ 家屋倒壊等氾濫想定区域（河岸侵食）':houseErosion,
+ '④ 内水（雨水出水）浸水想定区域':inlandFlood,
+ '⑤ 高潮浸水想定区域':stormSurge,
+ '⑥ 津波浸水想定':tsunami
+};
+
+let ctl=L.control.layers(baseMaps,overlays,{collapsed:window.innerWidth<650}).addTo(map);
+L.control.scale({position:'bottomleft',imperial:false}).addTo(map);
+
+function esc(v){
+ return String(v??'').replace(/[&<>"']/g,c=>({
+  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+ }[c]));
+}
+
+function makePopup(title,props,latlng){
+ let rows=Object.entries(props||{}).map(([k,v])=>{
+   if(v===null||v===undefined||String(v).trim()===''||k==='_searchKey')return '';
+   return `<tr>
+     <th style="white-space:nowrap;padding-right:8px;border-bottom:1px solid #ccc;text-align:left">${esc(k)}</th>
+     <td style="border-bottom:1px solid #ccc">${esc(v)}</td>
+   </tr>`;
+ }).join('');
+
+ let btn='';
+ if(latlng){
+   const lat=latlng.lat,lng=latlng.lng;
+   btn=`<div style="margin-top:10px;display:flex;gap:6px">
+     <a href="https://www.google.com/maps/search/?api=1&query=${lat},${lng}" target="_blank"
+      style="flex:1;text-align:center;background:#4285F4;color:#fff;padding:5px;border-radius:4px;text-decoration:none;font-size:11px">Googleマップ</a>
+     <a href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}" target="_blank"
+      style="flex:1;text-align:center;background:#ea4335;color:#fff;padding:5px;border-radius:4px;text-decoration:none;font-size:11px">ストリートビュー</a>
+   </div>`;
+ }
+ return `<b>${esc(title)}</b><br>
+ <div style="max-height:220px;overflow:auto">
+ <table style="border-collapse:collapse;font-size:12px">${rows}</table>
+ </div>${btn}`;
+}
+
+
+function mapLinkButtons(latlng){
+ if(!latlng)return '';
+ const lat=Number(latlng.lat);
+ const lng=Number(latlng.lng);
+ if(!Number.isFinite(lat)||!Number.isFinite(lng))return '';
+
+ const google=`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+ const street=`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}`;
+
+ return `<div style="margin:8px 0 10px;display:flex;gap:6px">
+   <a href="${google}" target="_blank" rel="noopener"
+    style="flex:1;text-align:center;background:#4285F4;color:#fff;padding:7px 5px;border-radius:4px;text-decoration:none;font-size:12px;font-weight:700">Googleマップ</a>
+   <a href="${street}" target="_blank" rel="noopener"
+    style="flex:1;text-align:center;background:#EA4335;color:#fff;padding:7px 5px;border-radius:4px;text-decoration:none;font-size:12px;font-weight:700">ストリートビュー</a>
+ </div>`;
+}
+
+function hazardPopupHtml(zoneName,p,latlng){
+ let rows=Object.entries(p||{}).map(([k,v])=>{
+   if(v===null||v===undefined||String(v).trim()===''||k==='_searchKey')return '';
+   return `<tr>
+     <th style="white-space:nowrap;padding-right:8px;border-bottom:1px solid #ccc;text-align:left">${esc(k)}</th>
+     <td style="border-bottom:1px solid #ccc">${esc(v)}</td>
+   </tr>`;
+ }).join('');
+
+ return `<b>${esc(zoneName)}</b>`+
+        mapLinkButtons(latlng)+
+        `<div style="max-height:220px;overflow:auto">
+           <table style="border-collapse:collapse;font-size:12px">${rows}</table>
+         </div>`;
+}
+
+// 点レイヤー
+async function loadPointLayer(file,name,iconHtml,iconColor){
+ try{
+   const r=await fetch(file,{cache:'no-store'});
+   if(!r.ok)throw new Error(r.status);
+   const gj=await r.json();
+
+   const geo=L.geoJSON(gj,{
+     pane:'markersPane',
+     pointToLayer:(f,ll)=>L.marker(ll,{icon:L.divIcon({
+       html:`<div class="map-icon" style="color:${iconColor}">${iconHtml}</div>`,
+       className:'',iconSize:[30,30],iconAnchor:[15,15]
+     })}),
+     onEachFeature:(f,l)=>l.bindPopup(makePopup(name,f.properties,l.getLatLng()))
+   });
+
+   const cluster=L.markerClusterGroup({
+     disableClusteringAtZoom:15,
+     showCoverageOnHover:false
+   });
+   cluster.addLayer(geo);
+   ctl.addOverlay(cluster,name);
+ }catch(e){
+   console.error(name,e);
+ }
+}
+
+// 面レイヤー
+async function loadPolygonLayer(file,name,style){
+ try{
+   const r=await fetch(file,{cache:'no-store'});
+   if(!r.ok)throw new Error(r.status);
+   const gj=await r.json();
+
+   const layer=L.geoJSON(gj,{
+     pane:'zonesPane',
+     style:()=>style,
+     onEachFeature:(f,l)=>{
+       const center=l.getBounds?l.getBounds().getCenter():null;
+       l.bindPopup(makePopup(name,f.properties,center));
+     }
+   });
+   ctl.addOverlay(layer,name);
+ }catch(e){
+   console.error(name,e);
+ }
+}
+
+// 千葉県全域データ
+loadPointLayer(
+ './data/evacuation.geojson',
+ '避難所・指定緊急避難場所（千葉県全域）',
+ '<i class="fa-solid fa-person-running"></i>',
+ '#2e7d32'
+);
+
+loadPointLayer(
+ './data/bus_stops.geojson',
+ 'バス停（千葉県全域）',
+ '<i class="fa-solid fa-bus"></i>',
+ '#1565c0'
+);
+
+loadPolygonLayer(
+ './data/embankment_regulation.geojson',
+ '盛土規制区域（千葉県全域）',
+ {color:'#d84315',weight:2,fillColor:'#ff7043',fillOpacity:.20}
+);
+
+loadPolygonLayer(
+ './data/sabo_designated.geojson',
+ '砂防指定地（千葉県全域）',
+ {color:'#1565c0',weight:2,fillColor:'#42a5f5',fillOpacity:.24}
+);
+
+loadPolygonLayer(
+ './data/landslide_prevention.geojson',
+ '地すべり防止区域（千葉県全域）',
+ {color:'#7b1fa2',weight:2,fillColor:'#ab47bc',fillOpacity:.24}
+);
+
+loadPolygonLayer(
+ './data/steep_slope_danger.geojson',
+ '急傾斜地崩壊危険区域（千葉県全域）',
+ {color:'#c62828',weight:2,fillColor:'#ef5350',fillOpacity:.28}
+);
+
+
+// 今回対象6箇所。
+// GeoJSONの「今回対象」属性が欠けていても、箇所番号または箇所名で確実に判定する。
+const TARGET_CODES=new Set([
+ 'Ⅲ-0675',      // 黄和田畑1
+ 'Ⅱ-6089',      // 大坂1
+ 'Ⅱ-6688',      // 金谷4
+ 'Ⅱ-6099',      // 芋窪1
+ 'Ⅱ-6428',      // 亀沢32
+ 'Ⅰ-22500701'   // 四ノ宮沢
+]);
+
+const TARGET_NAMES=new Set([
+ '黄和田畑1',
+ '大坂1',
+ '金谷4',
+ '芋窪1',
+ '亀沢32',
+ '四ノ宮沢'
+]);
+
+function isCurrentTarget(p){
+ const flag=String(p?.['今回対象']??'').trim();
+ const code=String(p?.A33_004??'').trim();
+ const name=String(p?.A33_005??'').trim();
+
+ return flag!=='' || TARGET_CODES.has(code) || TARGET_NAMES.has(name);
+}
+
+// =====================================================
+// 土砂災害警戒区域 / 特別警戒区域
+// A33_002 = 1 → イエローゾーン
+// A33_002 = 2 → レッドゾーン
+// 「今回対象」が入っている6箇所 → 水色で強調
+// =====================================================
+let dosyaLayer=null;
+
+fetch('./A33-25_12Polygon.geojson',{cache:'no-store'})
+.then(r=>{
+ if(!r.ok)throw new Error(`A33-25_12Polygon.geojson HTTP ${r.status}`);
+ return r.json();
+})
+.then(data=>{
+
+ dosyaLayer=L.geoJSON(data,{
+   pane:'dosyaPane',
+   bubblingMouseEvents:false,
+
+   style:f=>{
+     const p=f.properties||{};
+     const zone=Number(p.A33_002);
+
+     if(zone===1){
+       return {
+         color:'#c9a900',
+         weight:1.3,
+         opacity:.95,
+         fillColor:'#ffff00',
+         fillOpacity:.42
+       };
+     }
+
+     if(zone===2){
+       return {
+         color:'#b00020',
+         weight:1.5,
+         opacity:.95,
+         fillColor:'#ff0000',
+         fillOpacity:.48
+       };
+     }
+
+     return {
+       color:'#777',
+       weight:1,
+       fillColor:'#aaa',
+       fillOpacity:.20
+     };
+   },
+
+   onEachFeature:(f,l)=>{
+     const p=f.properties||{};
+     const zone=Number(p.A33_002);
+
+     const zoneName=zone===1
+       ? '土砂災害警戒区域（イエローゾーン）'
+       : zone===2
+         ? '土砂災害特別警戒区域（レッドゾーン）'
+         : '土砂災害区域';
+
+     const num=p.A33_004||'';
+     const nm=p.A33_005||'';
+     const addr=p.A33_006||p.A33_009||'';
+
+     p._searchKey=`${num} ${nm} ${addr}`.trim();
+
+     // 検索から開いた場合に備えた初期ポップアップ
+     const center=l.getBounds?l.getBounds().getCenter():null;
+     l.bindPopup(hazardPopupHtml(zoneName,p,center),{
+       maxWidth:430,
+       minWidth:300
+     });
+
+     // 実際にクリックした地点でGoogle/Street Viewリンクを作り直す
+     l.on('click',e=>{
+       if(e.originalEvent){
+         L.DomEvent.stopPropagation(e.originalEvent);
+       }
+       const clicked=e.latlng || center;
+       l.setPopupContent(hazardPopupHtml(zoneName,p,clicked));
+       l.openPopup(clicked);
+     });
+
+     l.on({
+       mouseover:e=>{
+         e.target.setStyle({weight:4,fillOpacity:.65});
+         if(e.target.bringToFront)e.target.bringToFront();
+       },
+       mouseout:e=>{
+         dosyaLayer.resetStyle(e.target);
+       }
+     });
+   }
+ }).addTo(map);
+
+ ctl.addOverlay(
+   dosyaLayer,
+   '土砂災害警戒区域・特別警戒区域（2025年）'
+ );
+
+ // 箇所番号・箇所名・住所検索
+ const searchCtrl=new L.Control.Search({
+   layer:dosyaLayer,
+   propertyName:'_searchKey',
+   textPlaceholder:'箇所番号 / 箇所名 / 住所',
+   marker:false,
+   zoom:16,
+   collapsed:window.innerWidth<650,
+   initial:false
+ }).addTo(map);
+
+ searchCtrl.on('search:locationfound',e=>{
+   if(e.layer.getBounds){
+     map.fitBounds(e.layer.getBounds(),{
+       maxZoom:17,
+       padding:[24,24]
+     });
+   }
+   if(e.layer.openPopup)e.layer.openPopup();
+ });
+
+ const el=searchCtrl._container||searchCtrl.getContainer();
+ const tag=document.createElement('span');
+ tag.className='search-tag';
+ tag.textContent='⚠️ 土砂災害検索';
+ (el.querySelector('form')||el).insertBefore(tag,el.firstChild);
+
+})
+.catch(err=>{
+ console.error('土砂災害区域の読み込みに失敗:',err);
 });
+
+
+// =====================================================
+// 今回対象の既指定箇所調査（6箇所）：別GeoJSONレイヤー（青色）
+// 本体の土砂災害区域は通常の黄色/赤色のまま。
+// このレイヤーをONにした時だけ既指定箇所調査6箇所を青で重ねて表示。
+// 青レイヤー自身はクリックを受けず、下の黄色/赤色レイヤーへクリックを通します。
+// =====================================================
+fetch('./data/chiba_current_6targets.geojson',{cache:'no-store'})
+.then(r=>{
+ if(!r.ok)throw new Error(`chiba_current_6targets.geojson HTTP ${r.status}`);
+ return r.json();
+})
+.then(data=>{
+ const current6=L.geoJSON(data,{
+   pane:'highlightPane',
+   interactive:false,
+   bubblingMouseEvents:false,
+   style:{
+     color:'#0057B8',
+     weight:4,
+     opacity:1,
+     fillColor:'#00A8FF',
+     fillOpacity:.50
+   },
+   onEachFeature:(f,l)=>{
+     l.once('add',()=>{
+       const el=l.getElement && l.getElement();
+       if(el) el.style.pointerEvents='none';
+     });
+   }
+ });
+
+ // 初期OFF。チェックした時だけ青で重ねる。
+ ctl.addOverlay(current6,'今回対象の既指定箇所調査（6箇所）');
+ console.log('今回対象6箇所：クリック透過の青ハイライトとして読込完了');
+})
+.catch(err=>console.error('今回対象の既指定箇所調査（6箇所）の読込に失敗:',err));
+
+// 旧市町村境界（1920年）
+async function loadHistoricalAdmin(){
+ const remote='https://geoshape.ex.nii.ac.jp/city/topojson/19200101/12/12_city.f.topojson';
+ let gj=null;
+
+ try{
+   const r=await fetch(remote,{cache:'force-cache'});
+   if(!r.ok)throw new Error(r.status);
+
+   const topo=await r.json();
+   const objKey=Object.keys(topo.objects)[0];
+   gj=topojson.feature(topo,topo.objects[objKey]);
+
+ }catch(e){
+   console.warn('旧市町村全県版を取得できないためローカル版へ切替',e);
+
+   const r=await fetch('./data/historical_admin.geojson',{cache:'no-store'});
+   if(r.ok)gj=await r.json();
+ }
+
+ if(!gj)return;
+
+ const labels=L.layerGroup();
+
+ const layer=L.geoJSON(gj,{
+   pane:'boundaryPane',
+   style:{
+     color:'#546e7a',
+     weight:1.2,
+     fillColor:'#90a4ae',
+     fillOpacity:.07
+   },
+
+   onEachFeature:(f,l)=>{
+     const p=f.properties||{};
+     const center=l.getBounds?l.getBounds().getCenter():null;
+
+     l.bindPopup(
+       makePopup(
+         '旧市町村境界（1920年）',
+         p,
+         center
+       )
+     );
+
+     const nm=
+       p.name||
+       p.N03_004||
+       p.city||
+       p.city1||
+       p['市区町村名']||
+       '';
+
+     if(center&&nm){
+       L.marker(center,{
+         interactive:false,
+         icon:L.divIcon({
+           className:'city-label',
+           html:esc(nm),
+           iconSize:null
+         })
+       }).addTo(labels);
+     }
+   }
+ });
+
+ const group=L.layerGroup([layer,labels]);
+
+ ctl.addOverlay(
+   group,
+   '旧市町村境界（1920年・千葉県全域）'
+ );
+}
+
+loadHistoricalAdmin();
+
+
+// 土砂災害凡例
+const legend=L.control({position:'bottomright'});
+
+legend.onAdd=function(){
+ const div=L.DomUtil.create('div','legend-box');
+ div.innerHTML=
+   '<b>土砂災害区域</b><br>'+
+   '<span class="legend-swatch" style="background:#ffff00;border-color:#c9a900"></span>警戒区域（イエロー）<br>'+
+   '<span class="legend-swatch" style="background:#ff0000;border-color:#b00020"></span>特別警戒区域（レッド）<br>'+
+   '<span class="legend-swatch" style="background:#00A8FF;border-color:#0057B8"></span>今回対象の既指定箇所調査（6箇所）';
+ return div;
+};
+
+legend.addTo(map);
+
+
+// =====================================================
+// 現在地表示（スマホ対応）
+// GitHub PagesのHTTPS上で、端末の位置情報許可後に現在地を表示。
+// =====================================================
+let currentLocationMarker=null;
+let currentAccuracyCircle=null;
+
+const LocateControl=L.Control.extend({
+  options:{position:'topleft'},
+  onAdd:function(){
+    const div=L.DomUtil.create('div','locate-control');
+    div.title='現在地を表示';
+    div.setAttribute('role','button');
+    div.setAttribute('aria-label','現在地を表示');
+    div.innerHTML='◎';
+
+    L.DomEvent.disableClickPropagation(div);
+    L.DomEvent.on(div,'click',()=>{
+      locateMe(div);
+    });
+    return div;
+  }
+});
+map.addControl(new LocateControl());
+
+function locateMe(buttonEl){
+  if(!navigator.geolocation){
+    alert('この端末・ブラウザでは位置情報を利用できません。');
+    return;
+  }
+
+  buttonEl.classList.add('active');
+  buttonEl.innerHTML='…';
+
+  navigator.geolocation.getCurrentPosition(
+    pos=>{
+      const lat=pos.coords.latitude;
+      const lng=pos.coords.longitude;
+      const acc=pos.coords.accuracy || 0;
+      const ll=L.latLng(lat,lng);
+
+      if(currentLocationMarker) map.removeLayer(currentLocationMarker);
+      if(currentAccuracyCircle) map.removeLayer(currentAccuracyCircle);
+
+      currentAccuracyCircle=L.circle(ll,{
+        radius:acc,
+        color:'#1976d2',
+        weight:1.5,
+        opacity:.7,
+        fillColor:'#64b5f6',
+        fillOpacity:.12,
+        interactive:false
+      }).addTo(map);
+
+      currentLocationMarker=L.marker(ll,{
+        pane:'markersPane',
+        zIndexOffset:1000,
+        icon:L.divIcon({
+          className:'',
+          html:'<div class="locate-dot"></div>',
+          iconSize:[22,22],
+          iconAnchor:[11,11]
+        })
+      }).addTo(map);
+
+      currentLocationMarker.bindPopup(
+        `<b>現在地</b><br>`+
+        `緯度: ${lat.toFixed(6)}<br>`+
+        `経度: ${lng.toFixed(6)}<br>`+
+        `位置精度: 約${Math.round(acc)}m`
+      );
+
+      map.setView(ll,Math.max(map.getZoom(),16));
+      currentLocationMarker.openPopup();
+
+      buttonEl.classList.remove('active');
+      buttonEl.innerHTML='◎';
+    },
+    err=>{
+      buttonEl.classList.remove('active');
+      buttonEl.innerHTML='◎';
+
+      let msg='現在地を取得できませんでした。';
+      if(err.code===1) msg+=' 位置情報の利用を許可してください。';
+      else if(err.code===2) msg+=' 端末が現在地を特定できませんでした。';
+      else if(err.code===3) msg+=' 位置情報の取得がタイムアウトしました。';
+
+      alert(msg);
+    },
+    {
+      enableHighAccuracy:true,
+      timeout:15000,
+      maximumAge:10000
+    }
+  );
+}
+
+// 座標
+map.on('mousemove',e=>{
+ document.getElementById('coord').textContent=
+ `${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}  Z${map.getZoom()}`;
+});
+
+// 地図上の区域・施設クリックでは各レイヤーの属性ポップアップを優先します。
+// 座標は左下に常時表示されるため、地図クリック時の座標ポップアップは出しません。
 </script>
-
 </body>
 </html>
