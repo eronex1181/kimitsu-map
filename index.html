@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Kimitsu Field Map</title>
+<title>Kimitsu / Chiba Field Map</title>
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -15,19 +15,19 @@ html,body{height:100%;margin:0}
 #map{height:100%;background:#f3f3f3}
 .leaflet-control-layers{max-height:78vh;overflow:auto}
 .map-icon{
-  font-size:18px;width:30px;height:30px;line-height:30px;text-align:center;
-  background:white;border-radius:50%;border:2px solid #333;
-  box-shadow:0 2px 5px rgba(0,0,0,.3)
+ font-size:18px;width:30px;height:30px;line-height:30px;text-align:center;
+ background:white;border-radius:50%;border:2px solid #333;
+ box-shadow:0 2px 5px rgba(0,0,0,.3)
 }
 .city-label{
-  background:transparent;border:none;box-shadow:none;
-  color:#37474f;font-size:13px;font-weight:bold;
-  text-shadow:1px 1px 0 #fff,-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff,0 0 4px #fff;
-  white-space:nowrap
+ background:transparent;border:none;box-shadow:none;color:#37474f;
+ font-size:12px;font-weight:bold;
+ text-shadow:1px 1px 0 #fff,-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff,0 0 4px #fff;
+ white-space:nowrap
 }
 #coord{
-  position:absolute;z-index:1000;left:10px;bottom:10px;
-  background:rgba(255,255,255,.9);padding:4px 7px;border-radius:4px;font-size:12px
+ position:absolute;z-index:1000;left:10px;bottom:10px;
+ background:rgba(255,255,255,.9);padding:4px 7px;border-radius:4px;font-size:12px
 }
 </style>
 </head>
@@ -37,9 +37,11 @@ html,body{height:100%;margin:0}
 
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+
 <script>
-const bounds=[[35.1662899944,139.8749059525],[35.3336791683,140.1256305681]];
-const map=L.map('map',{preferCanvas:true,maxZoom:19}).fitBounds(bounds);
+// 千葉県全体を初期表示
+const map=L.map('map',{preferCanvas:true,maxZoom:19}).setView([35.50,140.13],9);
 
 map.createPane('csPane');       map.getPane('csPane').style.zIndex=410;
 map.createPane('hazardPane');   map.getPane('hazardPane').style.zIndex=420;
@@ -47,77 +49,44 @@ map.createPane('boundaryPane'); map.getPane('boundaryPane').style.zIndex=425;
 map.createPane('zonesPane');    map.getPane('zonesPane').style.zIndex=430;
 map.createPane('markersPane');  map.getPane('markersPane').style.zIndex=450;
 
-// 背景地図
-const gsiPale=L.tileLayer(
- 'https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',
- {maxZoom:18,attribution:'© 国土地理院'}
-).addTo(map);
-
-const gsiStd=L.tileLayer(
- 'https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png',
- {maxZoom:18,attribution:'© 国土地理院'}
-);
-
-const gsiPhoto=L.tileLayer(
- 'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg',
- {maxZoom:18,attribution:'© 国土地理院'}
-);
+// 背景
+const gsiPale=L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',
+ {maxZoom:18,attribution:'© 国土地理院'}).addTo(map);
+const gsiStd=L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png',
+ {maxZoom:18,attribution:'© 国土地理院'});
+const gsiPhoto=L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg',
+ {maxZoom:18,attribution:'© 国土地理院'});
 
 // 今昔マップ 関東
-const konjaku00=L.tileLayer(
- 'https://ktgis.net/kjmapw/kjtilemap/kanto/00/{z}/{x}/{-y}.png',
- {minZoom:8,maxNativeZoom:15,maxZoom:19,attribution:'© 今昔マップ on the web'}
-);
-const konjaku01=L.tileLayer(
- 'https://ktgis.net/kjmapw/kjtilemap/kanto/01/{z}/{x}/{-y}.png',
- {minZoom:8,maxNativeZoom:15,maxZoom:19,attribution:'© 今昔マップ on the web'}
-);
-const konjaku02=L.tileLayer(
- 'https://ktgis.net/kjmapw/kjtilemap/kanto/02/{z}/{x}/{-y}.png',
- {minZoom:8,maxNativeZoom:15,maxZoom:19,attribution:'© 今昔マップ on the web'}
-);
-const konjaku03=L.tileLayer(
- 'https://ktgis.net/kjmapw/kjtilemap/kanto/03/{z}/{x}/{-y}.png',
- {minZoom:8,maxNativeZoom:15,maxZoom:19,attribution:'© 今昔マップ on the web'}
-);
+const konjaku00=L.tileLayer('https://ktgis.net/kjmapw/kjtilemap/kanto/00/{z}/{x}/{-y}.png',
+ {minZoom:8,maxNativeZoom:15,maxZoom:19,attribution:'© 今昔マップ on the web'});
+const konjaku01=L.tileLayer('https://ktgis.net/kjmapw/kjtilemap/kanto/01/{z}/{x}/{-y}.png',
+ {minZoom:8,maxNativeZoom:15,maxZoom:19,attribution:'© 今昔マップ on the web'});
+const konjaku02=L.tileLayer('https://ktgis.net/kjmapw/kjtilemap/kanto/02/{z}/{x}/{-y}.png',
+ {minZoom:8,maxNativeZoom:15,maxZoom:19,attribution:'© 今昔マップ on the web'});
+const konjaku03=L.tileLayer('https://ktgis.net/kjmapw/kjtilemap/kanto/03/{z}/{x}/{-y}.png',
+ {minZoom:8,maxNativeZoom:15,maxZoom:19,attribution:'© 今昔マップ on the web'});
 
-// CS立体図
-const cs=L.tileLayer(
- './tiles/cs/{z}/{x}/{y}.webp',
- {minZoom:10,maxNativeZoom:16,maxZoom:19,opacity:.70,bounds:bounds,pane:'csPane',
-  attribution:'CS立体図：国土地理院DEM1Aを加工'}
-);
+// 君津1mDEM由来CS（ここだけ君津周辺）
+const kimitsuBounds=[[35.1662899944,139.8749059525],[35.3336791683,140.1256305681]];
+const cs=L.tileLayer('./tiles/cs/{z}/{x}/{y}.webp',{
+ minZoom:10,maxNativeZoom:16,maxZoom:19,opacity:.70,bounds:kimitsuBounds,pane:'csPane',
+ attribution:'CS立体図：国土地理院DEM1Aを加工'
+});
 
 // 水害6レイヤー
-const floodL2=L.tileLayer(
- 'https://disaportaldata.gsi.go.jp/raster/01_flood_l2_shinsuishin_data/{z}/{x}/{y}.png',
- {minZoom:2,maxNativeZoom:17,maxZoom:19,opacity:.70,pane:'hazardPane',attribution:'© 国土地理院'}
-);
-
-const houseFlood=L.tileLayer(
- 'https://disaportaldata.gsi.go.jp/raster/01_flood_l2_kaokutoukai_hanran_data/{z}/{x}/{y}.png',
- {minZoom:4,maxNativeZoom:17,maxZoom:19,opacity:.75,pane:'hazardPane',attribution:'© 国土地理院'}
-);
-
-const houseErosion=L.tileLayer(
- 'https://disaportaldata.gsi.go.jp/raster/01_flood_l2_kaokutoukai_kagan_data/{z}/{x}/{y}.png',
- {minZoom:4,maxNativeZoom:17,maxZoom:19,opacity:.75,pane:'hazardPane',attribution:'© 国土地理院'}
-);
-
-const inlandFlood=L.tileLayer(
- 'https://disaportaldata.gsi.go.jp/raster/02_naisui_data/{z}/{x}/{y}.png',
- {minZoom:2,maxNativeZoom:17,maxZoom:19,opacity:.70,pane:'hazardPane',attribution:'© 国土地理院'}
-);
-
-const stormSurge=L.tileLayer(
- 'https://disaportaldata.gsi.go.jp/raster/03_hightide_l2_shinsuishin_data/{z}/{x}/{y}.png',
- {minZoom:2,maxNativeZoom:17,maxZoom:19,opacity:.70,pane:'hazardPane',attribution:'© 国土地理院'}
-);
-
-const tsunami=L.tileLayer(
- 'https://disaportaldata.gsi.go.jp/raster/04_tsunami_newlegend_data/{z}/{x}/{y}.png',
- {minZoom:2,maxNativeZoom:17,maxZoom:19,opacity:.70,pane:'hazardPane',attribution:'© 国土地理院'}
-);
+const floodL2=L.tileLayer('https://disaportaldata.gsi.go.jp/raster/01_flood_l2_shinsuishin_data/{z}/{x}/{y}.png',
+ {minZoom:2,maxNativeZoom:17,maxZoom:19,opacity:.70,pane:'hazardPane',attribution:'© 国土地理院'});
+const houseFlood=L.tileLayer('https://disaportaldata.gsi.go.jp/raster/01_flood_l2_kaokutoukai_hanran_data/{z}/{x}/{y}.png',
+ {minZoom:4,maxNativeZoom:17,maxZoom:19,opacity:.75,pane:'hazardPane',attribution:'© 国土地理院'});
+const houseErosion=L.tileLayer('https://disaportaldata.gsi.go.jp/raster/01_flood_l2_kaokutoukai_kagan_data/{z}/{x}/{y}.png',
+ {minZoom:4,maxNativeZoom:17,maxZoom:19,opacity:.75,pane:'hazardPane',attribution:'© 国土地理院'});
+const inlandFlood=L.tileLayer('https://disaportaldata.gsi.go.jp/raster/02_naisui_data/{z}/{x}/{y}.png',
+ {minZoom:2,maxNativeZoom:17,maxZoom:19,opacity:.70,pane:'hazardPane',attribution:'© 国土地理院'});
+const stormSurge=L.tileLayer('https://disaportaldata.gsi.go.jp/raster/03_hightide_l2_shinsuishin_data/{z}/{x}/{y}.png',
+ {minZoom:2,maxNativeZoom:17,maxZoom:19,opacity:.70,pane:'hazardPane',attribution:'© 国土地理院'});
+const tsunami=L.tileLayer('https://disaportaldata.gsi.go.jp/raster/04_tsunami_newlegend_data/{z}/{x}/{y}.png',
+ {minZoom:2,maxNativeZoom:17,maxZoom:19,opacity:.70,pane:'hazardPane',attribution:'© 国土地理院'});
 
 const baseMaps={
  '国土地理院（淡色）':gsiPale,
@@ -128,7 +97,6 @@ const baseMaps={
  '今昔マップ 関東（1972～1982年）':konjaku02,
  '今昔マップ 関東（1988～2008年）':konjaku03
 };
-
 const overlays={
  '君津CS立体図（1m DEM）':cs,
  '① 洪水浸水想定区域（想定最大規模）':floodL2,
@@ -139,362 +107,123 @@ const overlays={
  '⑥ 津波浸水想定':tsunami
 };
 
-let ctl=L.control.layers(
- baseMaps,
- overlays,
- {collapsed:window.innerWidth<650}
-).addTo(map);
-
-L.control.scale({
- position:'bottomleft',
- imperial:false
-}).addTo(map);
+let ctl=L.control.layers(baseMaps,overlays,{collapsed:window.innerWidth<650}).addTo(map);
+L.control.scale({position:'bottomleft',imperial:false}).addTo(map);
 
 function esc(v){
- return String(v??'').replace(
-   /[&<>"']/g,
-   c=>({
-     '&':'&amp;',
-     '<':'&lt;',
-     '>':'&gt;',
-     '"':'&quot;',
-     "'":'&#39;'
-   }[c])
- );
+ return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
-
 function makePopup(title,props,latlng){
  let rows=Object.entries(props||{}).map(([k,v])=>{
-   if(v===null || v===undefined || String(v).trim()==='') return '';
-
-   return `
-   <tr>
-     <th style="white-space:nowrap;padding-right:8px;border-bottom:1px solid #ccc;text-align:left">
-       ${esc(k)}
-     </th>
-     <td style="border-bottom:1px solid #ccc">
-       ${esc(v)}
-     </td>
-   </tr>`;
+   if(v===null||v===undefined||String(v).trim()==='')return '';
+   return `<tr><th style="white-space:nowrap;padding-right:8px;border-bottom:1px solid #ccc;text-align:left">${esc(k)}</th><td style="border-bottom:1px solid #ccc">${esc(v)}</td></tr>`;
  }).join('');
-
  let btn='';
-
  if(latlng){
-   const lat=latlng.lat;
-   const lng=latlng.lng;
-
-   btn=`
-   <div style="margin-top:10px;display:flex;gap:6px">
-
-     <a
-       href="https://www.google.com/maps/search/?api=1&query=${lat},${lng}"
-       target="_blank"
-       style="flex:1;text-align:center;background:#4285F4;color:#fff;padding:5px;border-radius:4px;text-decoration:none;font-size:11px">
-       Googleマップ
-     </a>
-
-     <a
-       href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}"
-       target="_blank"
-       style="flex:1;text-align:center;background:#ea4335;color:#fff;padding:5px;border-radius:4px;text-decoration:none;font-size:11px">
-       ストリートビュー
-     </a>
-
+   const lat=latlng.lat,lng=latlng.lng;
+   btn=`<div style="margin-top:10px;display:flex;gap:6px">
+   <a href="https://www.google.com/maps/search/?api=1&query=${lat},${lng}" target="_blank"
+   style="flex:1;text-align:center;background:#4285F4;color:#fff;padding:5px;border-radius:4px;text-decoration:none;font-size:11px">Googleマップ</a>
+   <a href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}" target="_blank"
+   style="flex:1;text-align:center;background:#ea4335;color:#fff;padding:5px;border-radius:4px;text-decoration:none;font-size:11px">ストリートビュー</a>
    </div>`;
  }
-
- return `
- <b>${esc(title)}</b>
- <br>
- <div style="max-height:200px;overflow:auto">
-   <table style="border-collapse:collapse;font-size:12px">
-     ${rows}
-   </table>
- </div>
- ${btn}`;
+ return `<b>${esc(title)}</b><br><div style="max-height:220px;overflow:auto"><table style="border-collapse:collapse;font-size:12px">${rows}</table></div>${btn}`;
 }
 
-// 点レイヤー
-async function loadPointLayer(
- file,
- name,
- iconHtml,
- iconColor,
- defaultOn=false
-){
+async function loadPointLayer(file,name,iconHtml,iconColor){
  try{
-
-   const r=await fetch(file,{cache:'no-store'});
-
-   if(!r.ok)return;
-
-   const gj=await r.json();
-
-   const geo=L.geoJSON(gj,{
-
-     pane:'markersPane',
-
-     pointToLayer:(f,ll)=>L.marker(
-       ll,
-       {
-         icon:L.divIcon({
-           html:
-             `<div class="map-icon" style="color:${iconColor}">
-               ${iconHtml}
-              </div>`,
-           className:'',
-           iconSize:[30,30],
-           iconAnchor:[15,15]
-         })
-       }
-     ),
-
-     onEachFeature:(f,l)=>{
-
-       const c=l.getLatLng
-         ? l.getLatLng()
-         : null;
-
-       l.bindPopup(
-         makePopup(
-           name,
-           f.properties,
-           c
-         )
-       );
-     }
-   });
-
-   const cluster=L.markerClusterGroup({
-     disableClusteringAtZoom:15
-   });
-
-   cluster.addLayer(geo);
-
-   if(defaultOn){
-     cluster.addTo(map);
-   }
-
-   ctl.addOverlay(
-     cluster,
-     name
-   );
-
- }catch(e){
-
-   console.log(
-     file,
-     e
-   );
-
- }
+  const r=await fetch(file,{cache:'no-store'}); if(!r.ok)throw new Error(r.status);
+  const gj=await r.json();
+  const geo=L.geoJSON(gj,{
+   pane:'markersPane',
+   pointToLayer:(f,ll)=>L.marker(ll,{icon:L.divIcon({
+    html:`<div class="map-icon" style="color:${iconColor}">${iconHtml}</div>`,
+    className:'',iconSize:[30,30],iconAnchor:[15,15]
+   })}),
+   onEachFeature:(f,l)=>l.bindPopup(makePopup(name,f.properties,l.getLatLng()))
+  });
+  const cluster=L.markerClusterGroup({disableClusteringAtZoom:15,showCoverageOnHover:false});
+  cluster.addLayer(geo);
+  ctl.addOverlay(cluster,name);
+ }catch(e){console.error(name,e)}
 }
 
-// 面レイヤー
-async function loadPolygonLayer(
- file,
- name,
- style,
- defaultOn=false,
- labelField=null
-){
+async function loadPolygonLayer(file,name,style){
  try{
-
-   const r=await fetch(
-     file,
-     {cache:'no-store'}
-   );
-
-   if(!r.ok)return;
-
-   const gj=await r.json();
-
-   const labels=L.layerGroup();
-
-   const layer=L.geoJSON(
-     gj,
-     {
-
-       pane:
-         name==='旧市町村境界'
-         ?'boundaryPane'
-         :'zonesPane',
-
-       style:()=>style,
-
-       onEachFeature:(f,l)=>{
-
-         let center=null;
-
-         if(l.getBounds){
-           center=l.getBounds().getCenter();
-         }
-
-         l.bindPopup(
-           makePopup(
-             name,
-             f.properties,
-             center
-           )
-         );
-
-         if(
-           labelField &&
-           center &&
-           f.properties &&
-           f.properties[labelField]
-         ){
-
-           L.marker(
-             center,
-             {
-               interactive:false,
-
-               icon:L.divIcon({
-                 className:'city-label',
-                 html:esc(
-                   f.properties[labelField]
-                 ),
-                 iconSize:null
-               })
-
-             }
-           ).addTo(labels);
-         }
-
-       }
-
-     }
-   );
-
-   const group=L.layerGroup([
-     layer,
-     labels
-   ]);
-
-   if(defaultOn){
-     group.addTo(map);
+  const r=await fetch(file,{cache:'no-store'}); if(!r.ok)throw new Error(r.status);
+  const gj=await r.json();
+  const layer=L.geoJSON(gj,{
+   pane:'zonesPane',style:()=>style,
+   onEachFeature:(f,l)=>{
+    const center=l.getBounds?l.getBounds().getCenter():null;
+    l.bindPopup(makePopup(name,f.properties,center));
    }
-
-   ctl.addOverlay(
-     group,
-     name
-   );
-
- }catch(e){
-
-   console.log(
-     file,
-     e
-   );
-
- }
+  });
+  ctl.addOverlay(layer,name);
+ }catch(e){console.error(name,e)}
 }
 
-// dataフォルダ
-loadPointLayer(
- './data/evacuation.geojson',
- '避難所・指定緊急避難場所',
- '<i class="fa-solid fa-person-running"></i>',
- '#2e7d32',
- false
-);
+// 全県版ローカルデータ
+loadPointLayer('./data/evacuation.geojson','避難所・指定緊急避難場所（千葉県全域）',
+ '<i class="fa-solid fa-person-running"></i>','#2e7d32');
+loadPointLayer('./data/bus_stops.geojson','バス停（千葉県全域）',
+ '<i class="fa-solid fa-bus"></i>','#1565c0');
 
-loadPointLayer(
- './data/bus_stops.geojson',
- 'バス停',
- '<i class="fa-solid fa-bus"></i>',
- '#1565c0',
- false
-);
+loadPolygonLayer('./data/embankment_regulation.geojson','盛土規制区域（千葉県全域）',
+ {color:'#d84315',weight:2,fillColor:'#ff7043',fillOpacity:.20});
+loadPolygonLayer('./data/sabo_designated.geojson','砂防指定地（千葉県全域）',
+ {color:'#1565c0',weight:2,fillColor:'#42a5f5',fillOpacity:.24});
+loadPolygonLayer('./data/landslide_prevention.geojson','地すべり防止区域（千葉県全域）',
+ {color:'#7b1fa2',weight:2,fillColor:'#ab47bc',fillOpacity:.24});
+loadPolygonLayer('./data/steep_slope_danger.geojson','急傾斜地崩壊危険区域（千葉県全域）',
+ {color:'#c62828',weight:2,fillColor:'#ef5350',fillOpacity:.28});
 
-loadPolygonLayer(
- './data/historical_admin.geojson',
- '旧市町村境界',
- {
-   color:'#546e7a',
-   weight:1.3,
-   fillColor:'#90a4ae',
-   fillOpacity:.08
- },
- true,
- 'name'
-);
+// 旧市町村境界：Geoshapeの1920-01-01千葉県全域を直接取得。
+// 取得に失敗した場合のみ、従来の君津周辺ローカル版へフォールバック。
+async function loadHistoricalAdmin(){
+ const remote='https://geoshape.ex.nii.ac.jp/city/topojson/19200101/12/12_city.f.topojson';
+ let gj=null;
+ try{
+   const r=await fetch(remote,{cache:'force-cache'});
+   if(!r.ok)throw new Error(r.status);
+   const topo=await r.json();
+   const objKey=Object.keys(topo.objects)[0];
+   gj=topojson.feature(topo,topo.objects[objKey]);
+ }catch(e){
+   console.warn('旧市町村全県版を取得できないためローカル版へ切替',e);
+   const r=await fetch('./data/historical_admin.geojson',{cache:'no-store'});
+   if(r.ok)gj=await r.json();
+ }
+ if(!gj)return;
 
-loadPolygonLayer(
- './data/embankment_regulation.geojson',
- '盛土規制区域',
- {
-   color:'#d84315',
-   weight:2,
-   fillColor:'#ff7043',
-   fillOpacity:.20
- },
- false
-);
+ const labels=L.layerGroup();
+ const layer=L.geoJSON(gj,{
+   pane:'boundaryPane',
+   style:{color:'#546e7a',weight:1.2,fillColor:'#90a4ae',fillOpacity:.07},
+   onEachFeature:(f,l)=>{
+     const p=f.properties||{};
+     const center=l.getBounds?l.getBounds().getCenter():null;
+     l.bindPopup(makePopup('旧市町村境界（1920年）',p,center));
+     const nm=p.name||p.N03_004||p.city||p.city1||p['市区町村名']||'';
+     if(center&&nm){
+       L.marker(center,{interactive:false,icon:L.divIcon({
+         className:'city-label',html:esc(nm),iconSize:null
+       })}).addTo(labels);
+     }
+   }
+ });
+ const group=L.layerGroup([layer,labels]);
+ ctl.addOverlay(group,'旧市町村境界（1920年・千葉県全域）');
+}
+loadHistoricalAdmin();
 
-loadPolygonLayer(
- './data/sabo_designated.geojson',
- '砂防指定地',
- {
-   color:'#1565c0',
-   weight:2,
-   fillColor:'#42a5f5',
-   fillOpacity:.24
- },
- false
-);
-
-loadPolygonLayer(
- './data/landslide_prevention.geojson',
- '地すべり防止区域',
- {
-   color:'#7b1fa2',
-   weight:2,
-   fillColor:'#ab47bc',
-   fillOpacity:.24
- },
- false
-);
-
-loadPolygonLayer(
- './data/steep_slope_danger.geojson',
- '急傾斜地崩壊危険区域',
- {
-   color:'#c62828',
-   weight:2,
-   fillColor:'#ef5350',
-   fillOpacity:.28
- },
- false
-);
-
-// マウス座標
 map.on('mousemove',e=>{
-
- document.getElementById(
-   'coord'
- ).textContent=
-
- `${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}  Z${map.getZoom()}`;
-
+ document.getElementById('coord').textContent=`${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}  Z${map.getZoom()}`;
 });
-
-// 地図クリック
 map.on('click',e=>{
-
- L.popup()
-  .setLatLng(
-    e.latlng
-  )
-  .setContent(
-    `${e.latlng.lat.toFixed(7)}, ${e.latlng.lng.toFixed(7)}`
-  )
-  .openOn(map);
-
+ L.popup().setLatLng(e.latlng).setContent(`${e.latlng.lat.toFixed(7)}, ${e.latlng.lng.toFixed(7)}`).openOn(map);
 });
 </script>
-
 </body>
 </html>
