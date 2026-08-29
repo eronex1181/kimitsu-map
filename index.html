@@ -317,6 +317,7 @@ fetch('./A33-25_12Polygon.geojson',{cache:'no-store'})
 
  dosyaLayer=L.geoJSON(data,{
    pane:'dosyaPane',
+   bubblingMouseEvents:false,
 
    style:f=>{
      const p=f.properties||{};
@@ -425,9 +426,9 @@ fetch('./A33-25_12Polygon.geojson',{cache:'no-store'})
 
 
 // =====================================================
-// 今回対象6箇所：別GeoJSONレイヤー（青色）
+// 今回対象の既指定箇所調査（6箇所）：別GeoJSONレイヤー（青色）
 // 本体の土砂災害区域は通常の黄色/赤色のまま。
-// このレイヤーをONにした時だけ6箇所を青で重ねて表示。
+// このレイヤーをONにした時だけ既指定箇所調査6箇所を青で重ねて表示。
 // =====================================================
 fetch('./data/chiba_current_6targets.geojson',{cache:'no-store'})
 .then(r=>{
@@ -437,6 +438,7 @@ fetch('./data/chiba_current_6targets.geojson',{cache:'no-store'})
 .then(data=>{
  const current6=L.geoJSON(data,{
    pane:'markersPane',
+   bubblingMouseEvents:false,
    style:{
      color:'#0057B8',
      weight:4,
@@ -448,16 +450,16 @@ fetch('./data/chiba_current_6targets.geojson',{cache:'no-store'})
      const p=f.properties||{};
      const center=l.getBounds?l.getBounds().getCenter():null;
      l.bindPopup(
-       `<b>★ 今回対象（6箇所）</b><br>`+
+       `<b>今回対象の既指定箇所調査（6箇所）</b><br>`+
        makePopup('区域情報',p,center)
      );
    }
  });
 
  // 初期OFF。チェックした時だけ青で重ねる。
- ctl.addOverlay(current6,'★ 今回対象（6箇所・青）');
+ ctl.addOverlay(current6,'今回対象の既指定箇所調査（6箇所）');
 })
-.catch(err=>console.error('今回対象6箇所の読込に失敗:',err));
+.catch(err=>console.error('今回対象の既指定箇所調査（6箇所）の読込に失敗:',err));
 
 // 旧市町村境界（1920年）
 async function loadHistoricalAdmin(){
@@ -543,7 +545,8 @@ legend.onAdd=function(){
  div.innerHTML=
    '<b>土砂災害区域</b><br>'+
    '<span class="legend-swatch" style="background:#ffff00;border-color:#c9a900"></span>警戒区域（イエロー）<br>'+
-   '<span class="legend-swatch" style="background:#ff0000;border-color:#b00020"></span>特別警戒区域（レッド）';
+   '<span class="legend-swatch" style="background:#ff0000;border-color:#b00020"></span>特別警戒区域（レッド）<br>'+
+   '<span class="legend-swatch" style="background:#00A8FF;border-color:#0057B8"></span>今回対象の既指定箇所調査（6箇所）';
  return div;
 };
 
@@ -555,12 +558,8 @@ map.on('mousemove',e=>{
  `${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}  Z${map.getZoom()}`;
 });
 
-map.on('click',e=>{
- L.popup()
- .setLatLng(e.latlng)
- .setContent(`${e.latlng.lat.toFixed(7)}, ${e.latlng.lng.toFixed(7)}`)
- .openOn(map);
-});
+// 地図上の区域・施設クリックでは各レイヤーの属性ポップアップを優先します。
+// 座標は左下に常時表示されるため、地図クリック時の座標ポップアップは出しません。
 </script>
 </body>
 </html>
