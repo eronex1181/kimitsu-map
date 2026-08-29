@@ -320,21 +320,8 @@ fetch('./A33-25_12Polygon.geojson',{cache:'no-store'})
 
    style:f=>{
      const p=f.properties||{};
-     const target=isCurrentTarget(p);
      const zone=Number(p.A33_002);
 
-     // 今回の6箇所
-     if(target){
-       return {
-         color:'#0047ab',
-         weight:3.5,
-         opacity:1,
-         fillColor:'#00a8ff',
-         fillOpacity:.55
-       };
-     }
-
-     // 土砂災害警戒区域（イエロー）
      if(zone===1){
        return {
          color:'#c9a900',
@@ -345,7 +332,6 @@ fetch('./A33-25_12Polygon.geojson',{cache:'no-store'})
        };
      }
 
-     // 土砂災害特別警戒区域（レッド）
      if(zone===2){
        return {
          color:'#b00020',
@@ -369,21 +355,15 @@ fetch('./A33-25_12Polygon.geojson',{cache:'no-store'})
      const target=isCurrentTarget(p);
      const zone=Number(p.A33_002);
 
-     const zoneName=target
-       ? '★ 今回対象'
-       : zone===1
-         ? '土砂災害警戒区域（イエローゾーン）'
-         : zone===2
-           ? '土砂災害特別警戒区域（レッドゾーン）'
-           : '土砂災害区域';
+     const zoneName=zone===1
+       ? '土砂災害警戒区域（イエローゾーン）'
+       : zone===2
+         ? '土砂災害特別警戒区域（レッドゾーン）'
+         : '土砂災害区域';
 
      const num=p.A33_004||'';
      const nm=p.A33_005||'';
      const addr=p.A33_006||p.A33_009||'';
-
-     if(target && !String(p['今回対象']??'').trim()){
-       p['今回対象']='○';
-     }
 
      p._searchKey=`${num} ${nm} ${addr}`.trim();
 
@@ -442,6 +422,42 @@ fetch('./A33-25_12Polygon.geojson',{cache:'no-store'})
 .catch(err=>{
  console.error('土砂災害区域の読み込みに失敗:',err);
 });
+
+
+// =====================================================
+// 今回対象6箇所：別GeoJSONレイヤー（青色）
+// 本体の土砂災害区域は通常の黄色/赤色のまま。
+// このレイヤーをONにした時だけ6箇所を青で重ねて表示。
+// =====================================================
+fetch('./data/chiba_current_6targets.geojson',{cache:'no-store'})
+.then(r=>{
+ if(!r.ok)throw new Error(`chiba_current_6targets.geojson HTTP ${r.status}`);
+ return r.json();
+})
+.then(data=>{
+ const current6=L.geoJSON(data,{
+   pane:'markersPane',
+   style:{
+     color:'#0057B8',
+     weight:4,
+     opacity:1,
+     fillColor:'#00A8FF',
+     fillOpacity:.50
+   },
+   onEachFeature:(f,l)=>{
+     const p=f.properties||{};
+     const center=l.getBounds?l.getBounds().getCenter():null;
+     l.bindPopup(
+       `<b>★ 今回対象（6箇所）</b><br>`+
+       makePopup('区域情報',p,center)
+     );
+   }
+ });
+
+ // 初期OFF。チェックした時だけ青で重ねる。
+ ctl.addOverlay(current6,'★ 今回対象（6箇所・青）');
+})
+.catch(err=>console.error('今回対象6箇所の読込に失敗:',err));
 
 // 旧市町村境界（1920年）
 async function loadHistoricalAdmin(){
@@ -527,8 +543,7 @@ legend.onAdd=function(){
  div.innerHTML=
    '<b>土砂災害区域</b><br>'+
    '<span class="legend-swatch" style="background:#ffff00;border-color:#c9a900"></span>警戒区域（イエロー）<br>'+
-   '<span class="legend-swatch" style="background:#ff0000;border-color:#b00020"></span>特別警戒区域（レッド）<br>'+
-   '<span class="legend-swatch" style="background:#00a8ff;border-color:#0047ab"></span>今回対象（6箇所）';
+   '<span class="legend-swatch" style="background:#ff0000;border-color:#b00020"></span>特別警戒区域（レッド）';
  return div;
 };
 
