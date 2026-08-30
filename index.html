@@ -42,7 +42,12 @@ html,body{height:100%;margin:0}
  display:inline-block;width:18px;height:12px;margin-right:6px;vertical-align:-1px;border:2px solid
 }
 
-.leaflet-facility-pane .leaflet-marker-icon{
+.leaflet-facility-pane{
+ pointer-events:none !important;
+}
+.leaflet-facility-pane .leaflet-marker-icon,
+.leaflet-facility-pane .marker-cluster{
+ pointer-events:auto !important;
  cursor:pointer;
 }
 
@@ -94,11 +99,11 @@ map.createPane('boundaryPane'); map.getPane('boundaryPane').style.zIndex=425;
 map.createPane('zonesPane');     map.getPane('zonesPane').style.zIndex=430;
 
 // バス停・避難場所等の施設アイコンは土砂災害区域より上に表示。
-// アイコンをクリックすれば施設ポップアップ、アイコン以外の黄・赤ポリゴンを
-// クリックすれば土砂災害区域ポップアップを表示する。
+// Pane自体はクリック透過し、アイコン／クラスタだけ pointer-events:auto。
+// そのため、アイコンは施設ポップアップ、その他の場所は下の土砂災害区域をクリックできる。
 map.createPane('facilityPane');
 map.getPane('facilityPane').style.zIndex=452;
-map.getPane('facilityPane').style.pointerEvents='auto';
+map.getPane('facilityPane').style.pointerEvents='none';
 
 map.createPane('dosyaPane');     map.getPane('dosyaPane').style.zIndex=440;
 
@@ -222,7 +227,7 @@ const overlays={
  '⑥ 津波浸水想定':tsunami
 };
 
-let ctl=L.control.layers(baseMaps,overlays,{collapsed:window.innerWidth<650}).addTo(map);
+let ctl=L.control.layers(baseMaps,overlays,{collapsed:false}).addTo(map);
 
 L.control.scale({position:'bottomleft',imperial:false}).addTo(map);
 
@@ -472,8 +477,10 @@ async function loadBusStops(){
         );
         l.on('click',e=>{
           if(e.originalEvent)L.DomEvent.stopPropagation(e.originalEvent);
-          l.setPopupContent(busStopPopup(f.properties||{},l.getLatLng()));
-          l.openPopup();
+          L.popup({maxWidth:420,minWidth:270})
+            .setLatLng(l.getLatLng())
+            .setContent(busStopPopup(f.properties||{},l.getLatLng()))
+            .openOn(map);
         });
       }
     });
@@ -481,9 +488,10 @@ async function loadBusStops(){
     const cluster=L.markerClusterGroup({
       disableClusteringAtZoom:15,
       showCoverageOnHover:false,
-      clusterPane:'facilityPane'
+      clusterPane:'facilityPane',
+      chunkedLoading:true
     });
-    cluster.addLayer(geo);
+    cluster.addLayers(geo.getLayers());
     ctl.addOverlay(cluster,'バス停（千葉県全域）');
   }catch(e){
     console.error('バス停',e);
@@ -514,8 +522,10 @@ async function loadEvacuation(){
         );
         l.on('click',e=>{
           if(e.originalEvent)L.DomEvent.stopPropagation(e.originalEvent);
-          l.setPopupContent(evacuationPopup(f.properties||{},l.getLatLng()));
-          l.openPopup();
+          L.popup({maxWidth:420,minWidth:270})
+            .setLatLng(l.getLatLng())
+            .setContent(evacuationPopup(f.properties||{},l.getLatLng()))
+            .openOn(map);
         });
       }
     });
@@ -523,9 +533,10 @@ async function loadEvacuation(){
     const cluster=L.markerClusterGroup({
       disableClusteringAtZoom:15,
       showCoverageOnHover:false,
-      clusterPane:'facilityPane'
+      clusterPane:'facilityPane',
+      chunkedLoading:true
     });
-    cluster.addLayer(geo);
+    cluster.addLayers(geo.getLayers());
     ctl.addOverlay(cluster,'避難所・指定緊急避難場所（千葉県全域）');
   }catch(e){
     console.error('避難場所',e);
