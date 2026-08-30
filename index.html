@@ -42,6 +42,10 @@ html,body{height:100%;margin:0}
  display:inline-block;width:18px;height:12px;margin-right:6px;vertical-align:-1px;border:2px solid
 }
 
+.leaflet-facility-pane .leaflet-marker-icon{
+ cursor:pointer;
+}
+
 .locate-control{
  background:#fff;
  width:38px;
@@ -89,10 +93,12 @@ map.createPane('hazardPane');   map.getPane('hazardPane').style.zIndex=420;
 map.createPane('boundaryPane'); map.getPane('boundaryPane').style.zIndex=425;
 map.createPane('zonesPane');     map.getPane('zonesPane').style.zIndex=430;
 
-// バス停・避難場所等の施設レイヤーは土砂災害区域より下に表示。
-// 重なっている場所では土砂災害ポリゴンのクリックを優先する。
+// バス停・避難場所等の施設アイコンは土砂災害区域より上に表示。
+// アイコンをクリックすれば施設ポップアップ、アイコン以外の黄・赤ポリゴンを
+// クリックすれば土砂災害区域ポップアップを表示する。
 map.createPane('facilityPane');
-map.getPane('facilityPane').style.zIndex=438;
+map.getPane('facilityPane').style.zIndex=452;
+map.getPane('facilityPane').style.pointerEvents='auto';
 
 map.createPane('dosyaPane');     map.getPane('dosyaPane').style.zIndex=440;
 
@@ -452,15 +458,24 @@ async function loadBusStops(){
       pane:'facilityPane',
       pointToLayer:(f,ll)=>L.marker(ll,{
         pane:'facilityPane',
+        interactive:true,
+        bubblingMouseEvents:false,
         icon:L.divIcon({
           html:`<div class="map-icon" style="color:#1565c0"><i class="fa-solid fa-bus"></i></div>`,
           className:'',iconSize:[30,30],iconAnchor:[15,15]
         })
       }),
-      onEachFeature:(f,l)=>l.bindPopup(
-        busStopPopup(f.properties||{},l.getLatLng()),
-        {maxWidth:420,minWidth:270}
-      )
+      onEachFeature:(f,l)=>{
+        l.bindPopup(
+          busStopPopup(f.properties||{},l.getLatLng()),
+          {maxWidth:420,minWidth:270}
+        );
+        l.on('click',e=>{
+          if(e.originalEvent)L.DomEvent.stopPropagation(e.originalEvent);
+          l.setPopupContent(busStopPopup(f.properties||{},l.getLatLng()));
+          l.openPopup();
+        });
+      }
     });
 
     const cluster=L.markerClusterGroup({
@@ -485,15 +500,24 @@ async function loadEvacuation(){
       pane:'facilityPane',
       pointToLayer:(f,ll)=>L.marker(ll,{
         pane:'facilityPane',
+        interactive:true,
+        bubblingMouseEvents:false,
         icon:L.divIcon({
           html:`<div class="map-icon" style="color:#2e7d32"><i class="fa-solid fa-person-running"></i></div>`,
           className:'',iconSize:[30,30],iconAnchor:[15,15]
         })
       }),
-      onEachFeature:(f,l)=>l.bindPopup(
-        evacuationPopup(f.properties||{},l.getLatLng()),
-        {maxWidth:420,minWidth:270}
-      )
+      onEachFeature:(f,l)=>{
+        l.bindPopup(
+          evacuationPopup(f.properties||{},l.getLatLng()),
+          {maxWidth:420,minWidth:270}
+        );
+        l.on('click',e=>{
+          if(e.originalEvent)L.DomEvent.stopPropagation(e.originalEvent);
+          l.setPopupContent(evacuationPopup(f.properties||{},l.getLatLng()));
+          l.openPopup();
+        });
+      }
     });
 
     const cluster=L.markerClusterGroup({
