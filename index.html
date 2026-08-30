@@ -31,8 +31,52 @@ html,body{height:100%;margin:0}
  font-size:12px;color:#fff;background:#e53935;font-weight:bold;white-space:nowrap
 }
 #coord{
- position:absolute;z-index:1000;left:10px;bottom:10px;
- background:rgba(255,255,255,.9);padding:4px 7px;border-radius:4px;font-size:12px
+ position:absolute;
+ z-index:1000;
+ left:10px;
+ bottom:36px;
+ background:rgba(255,255,255,.92);
+ padding:4px 7px;
+ border-radius:4px;
+ font-size:12px;
+ line-height:1.2;
+ pointer-events:none;
+}
+
+#pointinfo{
+ position:absolute;
+ z-index:1001;
+ left:10px;
+ bottom:62px;
+ max-width:min(390px,calc(100vw - 24px));
+ background:rgba(255,255,255,.96);
+ border:1px solid #bbb;
+ box-shadow:0 1px 5px rgba(0,0,0,.25);
+ border-radius:6px;
+ padding:7px 9px;
+ font-size:12px;
+ line-height:1.55;
+ display:none;
+}
+#pointinfo .point-title{font-weight:700;margin-bottom:2px}
+#pointinfo .point-address{word-break:break-word}
+#pointinfo .point-coord{font-family:monospace;color:#333}
+#pointinfo .point-note{font-size:10px;color:#777;margin-top:2px}
+
+/* 左下の距離スケールを見やすく表示 */
+.leaflet-control-scale{
+ margin-left:10px !important;
+ margin-bottom:8px !important;
+}
+.leaflet-control-scale-line{
+ background:rgba(255,255,255,.92);
+ color:#222;
+ border-color:#555;
+ border-top:none;
+ font-size:12px;
+ line-height:1.2;
+ padding:2px 6px 1px;
+ box-sizing:border-box;
 }
 .legend-box{
  background:rgba(255,255,255,.95);padding:8px 10px;border-radius:5px;
@@ -77,11 +121,13 @@ html,body{height:100%;margin:0}
 <body>
 <div id="map"></div>
 <div id="coord"></div>
+<div id="pointinfo"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet-search@3.0.9/dist/leaflet-search.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+<script src="https://maps.gsi.go.jp/js/muni.js"></script>
 
 <script>
 // 千葉県全体
@@ -229,7 +275,7 @@ const overlays={
 
 let ctl=L.control.layers(baseMaps,overlays,{collapsed:false}).addTo(map);
 
-L.control.scale({position:'bottomleft',imperial:false}).addTo(map);
+L.control.scale({position:'bottomleft',metric:true,imperial:false,maxWidth:150}).addTo(map);
 
 // =====================================================
 // 国土基本図 1/2500 図郭（千葉県）
@@ -1003,6 +1049,86 @@ function locateMe(buttonEl){
     }
   );
 }
+
+// =====================================================
+// 地図クリック地点の住所・緯度経度
+// 国土地理院リバースジオコーダを利用。
+// レイヤーのポップアップとは別の左下パネルに表示する。
+// =====================================================
+let pointInfoSeq=0;
+
+function municipalityNameFromCode(code){
+  try{
+    const raw=window.GSI?.MUNI_ARRAY?.[String(code)];
+    if(!raw)return '';
+    const parts=String(raw).split(',');
+    const pref=parts[1]||'';
+    const muni=parts[3]||'';
+    return `${pref}${muni}`.trim();
+  }catch(e){
+    return '';
+  }
+}
+
+async function showClickedPointInfo(latlng){
+  if(!latlng)return;
+
+  const panel=document.getElementById('pointinfo');
+  if(!panel)return;
+
+  const lat=Number(latlng.lat);
+  const lng=Number(latlng.lng);
+  if(!Number.isFinite(lat)||!Number.isFinite(lng))return;
+
+  const seq=++pointInfoSeq;
+  panel.style.display='block';
+  panel.innerHTML=
+    `<div class="point-title">クリック地点</div>`+
+    `<div class="point-address">住所：取得中…</div>`+
+    `<div class="point-coord">緯度：${lat.toFixed(7)}<br>経度：${lng.toFixed(7)}</div>`;
+
+  try{
+    const url=
+      `https://mreversegeocoder.gsi.go.jp/reverse-geocoder/LonLatToAddress?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`;
+    const r=await fetch(url,{cache:'no-store'});
+    if(!r.ok)throw new Error(`HTTP ${r.status}`);
+    const j=await r.json();
+
+    if(seq!==pointInfoSeq)return;
+
+    const result=j?.results||{};
+    const muni=municipalityNameFromCode(result.muniCd);
+    const town=String(result.lv01Nm||'').trim();
+    const address=`${muni}${town}`.trim();
+
+    panel.innerHTML=
+      `<div class="point-title">クリック地点</div>`+
+      `<div class="point-address">住所：${address ? esc(address) : '住所情報なし'}</div>`+
+      `<div class="point-coord">緯度：${lat.toFixed(7)}<br>経度：${lng.toFixed(7)}</div>`+
+      `<div class="point-note">住所：国土地理院リバースジオコーダ</div>`;
+  }catch(err){
+    if(seq!==pointInfoSeq)return;
+    panel.innerHTML=
+      `<div class="point-title">クリック地点</div>`+
+      `<div class="point-address">住所：取得できませんでした</div>`+
+      `<div class="point-coord">緯度：${lat.toFixed(7)}<br>経度：${lng.toFixed(7)}</div>`;
+    console.warn('住所の逆ジオコーディングに失敗:',err);
+  }
+}
+
+// 各レイヤー側で stopPropagation されても地点を拾えるよう、
+// DOMのcapture段階でクリック位置を取得する。
+// レイヤー操作ボタン・ポップアップ内部は除外。
+map.getContainer().addEventListener('click',ev=>{
+  const target=ev.target;
+  if(target?.closest?.('.leaflet-control,.leaflet-popup,.leaflet-tooltip'))return;
+
+  try{
+    const latlng=map.mouseEventToLatLng(ev);
+    showClickedPointInfo(latlng);
+  }catch(e){}
+},true);
+
 
 // 座標
 map.on('mousemove',e=>{
