@@ -73,7 +73,6 @@ html,body{height:100%;margin:0}
 <script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet-search@3.0.9/dist/leaflet-search.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/proj4@2.11.0/dist/proj4.js"></script>
 
 <script>
 // 千葉県全体
@@ -92,7 +91,6 @@ map.createPane('zonesPane');     map.getPane('zonesPane').style.zIndex=430;
 map.createPane('dosyaPane');     map.getPane('dosyaPane').style.zIndex=440;
 
 // 国土基本図1/2500図郭
-// ONにした時は図郭をタップして番号を確認できるよう、土砂災害区域より上に表示。
 map.createPane('zukakuPane');
 map.getPane('zukakuPane').style.zIndex=447;
 
@@ -213,50 +211,14 @@ const overlays={
 };
 
 let ctl=L.control.layers(baseMaps,overlays,{collapsed:window.innerWidth<650}).addTo(map);
-
 L.control.scale({position:'bottomleft',imperial:false}).addTo(map);
 
 
 // =====================================================
 // 国土基本図 1/2500 図郭（千葉県）
-// chiba_kodokihonzu_2500.json は JGD2011 / 平面直角座標系IX系（EPSG:6677）
-// Leafletは緯度経度を使うため、proj4jsでEPSG:4326へ変換して表示。
-// 初期状態はOFF。レイヤー一覧からONにすると、グレー枠を表示。
-// 図郭内をクリック／タップすると図郭番号を表示。
+// GeoJSONはWGS84（EPSG:4326）へ変換済み。
+// 初期OFF。ONでグレー枠表示、クリック／タップで図郭番号。
 // =====================================================
-
-// EPSG:6677 = JGD2011 / Japan Plane Rectangular CS IX
-proj4.defs(
-  'EPSG:6677',
-  '+proj=tmerc +lat_0=36 +lon_0=139.8333333333333 +k=0.9999 +x_0=0 +y_0=0 +ellps=GRS80 +units=m +no_defs +type=crs'
-);
-
-function transformGridCoords(coords){
-  // 座標1点 [X,Y] まで再帰的にたどって緯度経度へ変換
-  if(
-    Array.isArray(coords) &&
-    coords.length>=2 &&
-    typeof coords[0]==='number' &&
-    typeof coords[1]==='number'
-  ){
-    return proj4('EPSG:6677','EPSG:4326',[coords[0],coords[1]]);
-  }
-  return coords.map(transformGridCoords);
-}
-
-function convertGridToWgs84(gj){
-  const out=JSON.parse(JSON.stringify(gj));
-  (out.features||[]).forEach(f=>{
-    if(f.geometry && f.geometry.coordinates){
-      f.geometry.coordinates=transformGridCoords(f.geometry.coordinates);
-    }
-  });
-
-  // Leaflet側ではWGS84として扱うため、元の投影CRS記述は削除
-  delete out.crs;
-  return out;
-}
-
 let zukaku2500Layer=null;
 
 fetch('./chiba_kodokihonzu_2500.json',{cache:'no-store'})
@@ -264,14 +226,9 @@ fetch('./chiba_kodokihonzu_2500.json',{cache:'no-store'})
   if(!r.ok)throw new Error(`chiba_kodokihonzu_2500.json HTTP ${r.status}`);
   return r.json();
 })
-.then(raw=>{
-  const data=convertGridToWgs84(raw);
-
+.then(data=>{
   zukaku2500Layer=L.geoJSON(data,{
     pane:'zukakuPane',
-
-    // 枠はグレー、塗りはほぼ透明。
-    // fillを有効にすることで図郭の内側全体をタップ可能にする。
     style:{
       color:'#777',
       weight:1,
@@ -279,15 +236,9 @@ fetch('./chiba_kodokihonzu_2500.json',{cache:'no-store'})
       fillColor:'#ffffff',
       fillOpacity:.001
     },
-
     onEachFeature:(f,l)=>{
       const p=f.properties||{};
-      const code=
-        p.sheet_code ||
-        p.SHEET_CODE ||
-        p.code ||
-        p.CODE ||
-        '不明';
+      const code=p.sheet_code||p.SHEET_CODE||p.code||p.CODE||'不明';
 
       l.bindPopup(
         `<div style="font-size:13px;line-height:1.6;min-width:130px">`+
@@ -297,21 +248,13 @@ fetch('./chiba_kodokihonzu_2500.json',{cache:'no-store'})
         {maxWidth:260}
       );
 
-      // PCではマウスを乗せた時にも番号を確認可能
       l.bindTooltip(`図郭番号：${esc(code)}`,{
-        sticky:true,
-        direction:'top',
-        opacity:.95
+        sticky:true,direction:'top',opacity:.95
       });
 
       l.on({
         mouseover:e=>{
-          e.target.setStyle({
-            color:'#555',
-            weight:2,
-            opacity:1,
-            fillOpacity:.015
-          });
+          e.target.setStyle({color:'#555',weight:2,opacity:1,fillOpacity:.015});
           if(e.target.bringToFront)e.target.bringToFront();
         },
         mouseout:e=>{
@@ -321,13 +264,10 @@ fetch('./chiba_kodokihonzu_2500.json',{cache:'no-store'})
     }
   });
 
-  // 初期OFF。レイヤー選択からONにする。
   ctl.addOverlay(zukaku2500Layer,'国土基本図 1/2500 図郭');
-  console.log(`国土基本図1/2500図郭：${data.features?.length||0}図郭を読込完了`);
+  console.log(`千葉県 国土基本図1/2500図郭：${data.features?.length||0}図郭を読込完了`);
 })
-.catch(err=>{
-  console.error('国土基本図1/2500図郭の読み込みに失敗:',err);
-});
+.catch(err=>console.error('千葉県 国土基本図1/2500図郭の読み込みに失敗:',err));
 
 
 function esc(v){
