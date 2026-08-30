@@ -63,6 +63,34 @@ html,body{height:100%;margin:0}
 #pointinfo .point-coord{font-family:monospace;color:#333}
 #pointinfo .point-note{font-size:10px;color:#777;margin-top:2px}
 
+#pointinfo .copy-row{
+ display:flex;
+ flex-wrap:wrap;
+ gap:5px;
+ margin-top:7px;
+}
+#pointinfo .copy-btn{
+ appearance:none;
+ border:1px solid #aaa;
+ background:#fff;
+ color:#222;
+ border-radius:4px;
+ padding:4px 7px;
+ font-size:11px;
+ cursor:pointer;
+}
+#pointinfo .copy-btn:hover{background:#f1f1f1}
+#pointinfo .copy-btn.copied{
+ background:#e8f5e9;
+ border-color:#66a36b;
+}
+#pointinfo .plane-coord{
+ margin-top:4px;
+ font-family:monospace;
+ color:#333;
+}
+
+
 /* 左下の距離スケールを見やすく表示 */
 .leaflet-control-scale{
  margin-left:10px !important;
@@ -128,6 +156,7 @@ html,body{height:100%;margin:0}
 <script src="https://cdn.jsdelivr.net/npm/leaflet-search@3.0.9/dist/leaflet-search.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
 <script src="https://maps.gsi.go.jp/js/muni.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/proj4@2.11.0/dist/proj4.js"></script>
 
 <script>
 // 千葉県全体
@@ -1051,11 +1080,22 @@ function locateMe(buttonEl){
 }
 
 // =====================================================
-// 地図クリック地点の住所・緯度経度
-// 国土地理院リバースジオコーダを利用。
-// レイヤーのポップアップとは別の左下パネルに表示する。
+// 地図クリック地点の住所・緯度経度・平面直角座標
+// 住所：国土地理院リバースジオコーダ
+// 平面直角座標：JGD2011 / Japan Plane Rectangular CS IX (EPSG:6677)
+// 日本の測量表記に合わせ、X=北方向（Northing）、Y=東方向（Easting）として表示。
 // =====================================================
 let pointInfoSeq=0;
+let lastPointInfo=null;
+
+// EPSG:6677 = JGD2011 / Japan Plane Rectangular CS IX
+// 千葉県で一般的に用いる第IX系
+if(window.proj4){
+  proj4.defs(
+    'EPSG:6677',
+    '+proj=tmerc +lat_0=36 +lon_0=139.8333333333333 +k=0.9999 +x_0=0 +y_0=0 +ellps=GRS80 +units=m +no_defs'
+  );
+}
 
 function municipalityNameFromCode(code){
   try{
@@ -1070,6 +1110,115 @@ function municipalityNameFromCode(code){
   }
 }
 
+function toPlaneRectIX(lat,lng){
+  if(!window.proj4)return null;
+  try{
+    // proj4 returns [Easting, Northing].
+    // Japanese plane-rectangular convention displays X=Northing, Y=Easting.
+    const [easting,northing]=proj4('EPSG:4326','EPSG:6677',[lng,lat]);
+    if(!Number.isFinite(easting)||!Number.isFinite(northing))return null;
+    return {x:northing,y:easting};
+  }catch(e){
+    console.warn('平面直角座標変換に失敗:',e);
+    return null;
+  }
+}
+
+async function copyText(textValue,button){
+  const value=String(textValue??'');
+  if(!value)return;
+
+  try{
+    if(navigator.clipboard && window.isSecureContext){
+      await navigator.clipboard.writeText(value);
+    }else{
+      const ta=document.createElement('textarea');
+      ta.value=value;
+      ta.style.position='fixed';
+      ta.style.opacity='0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+    }
+
+    if(button){
+      const old=button.textContent;
+      button.textContent='コピー済み';
+      button.classList.add('copied');
+      setTimeout(()=>{
+        button.textContent=old;
+        button.classList.remove('copied');
+      },1200);
+    }
+  }catch(err){
+    console.warn('コピーに失敗:',err);
+    alert('コピーできませんでした。長押しまたは選択してコピーしてください。');
+  }
+}
+
+function copyButtonsHtml(){
+  return `<div class="copy-row">
+    <button type="button" class="copy-btn" data-copy="address">住所をコピー</button>
+    <button type="button" class="copy-btn" data-copy="latlng">緯度経度をコピー</button>
+    <button type="button" class="copy-btn" data-copy="xy">XYをコピー</button>
+    <button type="button" class="copy-btn" data-copy="all">全部コピー</button>
+  </div>`;
+}
+
+function bindPointCopyButtons(){
+  const panel=document.getElementById('pointinfo');
+  if(!panel||!lastPointInfo)return;
+
+  panel.querySelectorAll('.copy-btn').forEach(btn=>{
+    btn.addEventListener('click',ev=>{
+      ev.stopPropagation();
+
+      const kind=btn.dataset.copy;
+      const p=lastPointInfo;
+
+      const latlngText=`${p.lat.toFixed(7)}, ${p.lng.toFixed(7)}`;
+      const xyText=p.plane
+        ? `X=${p.plane.x.toFixed(3)}, Y=${p.plane.y.toFixed(3)}`
+        : '';
+
+      let copyValue='';
+      if(kind==='address')copyValue=p.address||'';
+      if(kind==='latlng')copyValue=latlngText;
+      if(kind==='xy')copyValue=xyText;
+      if(kind==='all'){
+        copyValue=[
+          p.address ? `住所：${p.address}` : '',
+          `緯度経度：${latlngText}`,
+          xyText ? `平面直角座標 IX系：${xyText}` : ''
+        ].filter(Boolean).join('\n');
+      }
+
+      copyText(copyValue,btn);
+    });
+  });
+}
+
+function renderPointInfo(panel,info,addressText,note=''){
+  const plane=info.plane;
+  const planeHtml=plane
+    ? `<div class="plane-coord">平面直角座標 IX系（JGD2011）<br>`+
+      `X：${plane.x.toFixed(3)} m<br>`+
+      `Y：${plane.y.toFixed(3)} m</div>`
+    : `<div class="plane-coord">平面直角座標：変換できません</div>`;
+
+  panel.innerHTML=
+    `<div class="point-title">クリック地点</div>`+
+    `<div class="point-address">住所：${addressText}</div>`+
+    `<div class="point-coord">緯度：${info.lat.toFixed(7)}<br>経度：${info.lng.toFixed(7)}</div>`+
+    planeHtml+
+    copyButtonsHtml()+
+    (note ? `<div class="point-note">${note}</div>` : '');
+
+  bindPointCopyButtons();
+}
+
 async function showClickedPointInfo(latlng){
   if(!latlng)return;
 
@@ -1081,11 +1230,19 @@ async function showClickedPointInfo(latlng){
   if(!Number.isFinite(lat)||!Number.isFinite(lng))return;
 
   const seq=++pointInfoSeq;
+  const plane=toPlaneRectIX(lat,lng);
+
+  lastPointInfo={
+    lat,lng,plane,address:''
+  };
+
   panel.style.display='block';
-  panel.innerHTML=
-    `<div class="point-title">クリック地点</div>`+
-    `<div class="point-address">住所：取得中…</div>`+
-    `<div class="point-coord">緯度：${lat.toFixed(7)}<br>経度：${lng.toFixed(7)}</div>`;
+  renderPointInfo(
+    panel,
+    lastPointInfo,
+    '取得中…',
+    '平面直角座標：JGD2011 第IX系（参考値）'
+  );
 
   try{
     const url=
@@ -1094,6 +1251,7 @@ async function showClickedPointInfo(latlng){
     if(!r.ok)throw new Error(`HTTP ${r.status}`);
     const j=await r.json();
 
+    // 連続クリック時に古い応答で上書きしない。
     if(seq!==pointInfoSeq)return;
 
     const result=j?.results||{};
@@ -1101,17 +1259,23 @@ async function showClickedPointInfo(latlng){
     const town=String(result.lv01Nm||'').trim();
     const address=`${muni}${town}`.trim();
 
-    panel.innerHTML=
-      `<div class="point-title">クリック地点</div>`+
-      `<div class="point-address">住所：${address ? esc(address) : '住所情報なし'}</div>`+
-      `<div class="point-coord">緯度：${lat.toFixed(7)}<br>経度：${lng.toFixed(7)}</div>`+
-      `<div class="point-note">住所：国土地理院リバースジオコーダ</div>`;
+    lastPointInfo.address=address;
+
+    renderPointInfo(
+      panel,
+      lastPointInfo,
+      address ? esc(address) : '住所情報なし',
+      '住所：国土地理院リバースジオコーダ ／ 平面直角座標：JGD2011 第IX系（参考値）'
+    );
   }catch(err){
     if(seq!==pointInfoSeq)return;
-    panel.innerHTML=
-      `<div class="point-title">クリック地点</div>`+
-      `<div class="point-address">住所：取得できませんでした</div>`+
-      `<div class="point-coord">緯度：${lat.toFixed(7)}<br>経度：${lng.toFixed(7)}</div>`;
+
+    renderPointInfo(
+      panel,
+      lastPointInfo,
+      '取得できませんでした',
+      '平面直角座標：JGD2011 第IX系（参考値）'
+    );
     console.warn('住所の逆ジオコーディングに失敗:',err);
   }
 }
@@ -1121,14 +1285,13 @@ async function showClickedPointInfo(latlng){
 // レイヤー操作ボタン・ポップアップ内部は除外。
 map.getContainer().addEventListener('click',ev=>{
   const target=ev.target;
-  if(target?.closest?.('.leaflet-control,.leaflet-popup,.leaflet-tooltip'))return;
+  if(target?.closest?.('.leaflet-control,.leaflet-popup,.leaflet-tooltip,#pointinfo'))return;
 
   try{
     const latlng=map.mouseEventToLatLng(ev);
     showClickedPointInfo(latlng);
   }catch(e){}
 },true);
-
 
 // 座標
 map.on('mousemove',e=>{
