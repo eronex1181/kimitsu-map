@@ -223,6 +223,7 @@ const cs=L.tileLayer('./tiles/cs/{z}/{x}/{y}.webp',{
 // =====================================================
 // 産総研 地質調査総合センター（GSJ） 地質図
 // 20万分の1：日本シームレス地質図V2
+V2
 // =====================================================
 
 // 20万分の1 日本シームレス地質図V2
@@ -680,7 +681,7 @@ loadPolygonLayer(
 );
 
 
-// 今回対象6箇所。
+// 今回対象7箇所。
 // GeoJSONの「今回対象」属性が欠けていても、箇所番号または箇所名で確実に判定する。
 const TARGET_CODES=new Set([
  'Ⅲ-0675',      // 黄和田畑1
@@ -688,7 +689,8 @@ const TARGET_CODES=new Set([
  'Ⅱ-6688',      // 金谷4
  'Ⅱ-6099',      // 芋窪1
  'Ⅱ-6428',      // 亀沢32
- 'Ⅰ-22500701'   // 四ノ宮沢
+ 'Ⅰ-22500701',  // 四ノ宮沢
+ 'Ⅰ-150008'     // 久留里市場2
 ]);
 
 const TARGET_NAMES=new Set([
@@ -697,7 +699,8 @@ const TARGET_NAMES=new Set([
  '金谷4',
  '芋窪1',
  '亀沢32',
- '四ノ宮沢'
+ '四ノ宮沢',
+ '久留里市場2'
 ]);
 
 function isCurrentTarget(p){
@@ -837,9 +840,9 @@ fetch('./A33-25_12Polygon.geojson',{cache:'no-store'})
 
 
 // =====================================================
-// 今回対象の既指定箇所調査（6箇所）：別GeoJSONレイヤー（青色）
+// 今回対象の既指定箇所調査（7箇所）：別GeoJSONレイヤー（青色）
 // 本体の土砂災害区域は通常の黄色/赤色のまま。
-// このレイヤーをONにした時だけ既指定箇所調査6箇所を青で重ねて表示。
+// このレイヤーをONにした時だけ既指定箇所調査7箇所を青で重ねて表示。
 // 青レイヤー自身はクリックを受けず、下の黄色/赤色レイヤーへクリックを通します。
 // =====================================================
 fetch('./data/chiba_current_6targets.geojson',{cache:'no-store'})
@@ -848,7 +851,7 @@ fetch('./data/chiba_current_6targets.geojson',{cache:'no-store'})
  return r.json();
 })
 .then(data=>{
- const current6=L.geoJSON(data,{
+ const current7=L.geoJSON(data,{
    pane:'highlightPane',
    interactive:false,
    bubblingMouseEvents:false,
@@ -868,10 +871,10 @@ fetch('./data/chiba_current_6targets.geojson',{cache:'no-store'})
  });
 
  // 初期OFF。チェックした時だけ青で重ねる。
- ctl.addOverlay(current6,'今回対象の既指定箇所調査（6箇所）');
- console.log('今回対象6箇所：クリック透過の青ハイライトとして読込完了');
+ ctl.addOverlay(current7,'今回対象の既指定箇所調査（7箇所）');
+ console.log('今回対象7箇所：クリック透過の青ハイライトとして読込完了');
 })
-.catch(err=>console.error('今回対象の既指定箇所調査（6箇所）の読込に失敗:',err));
+.catch(err=>console.error('今回対象の既指定箇所調査（7箇所）の読込に失敗:',err));
 
 // 旧市町村境界（1920年）
 async function loadHistoricalAdmin(){
@@ -956,10 +959,10 @@ const legend=L.control({position:'bottomright'});
 legend.onAdd=function(){
  const div=L.DomUtil.create('div','legend-box');
  div.innerHTML=
-   '<b>土砂災害区域</b><br>'+
-   '<span class="legend-swatch" style="background:#ffff00;border-color:#c9a900"></span>警戒区域（イエロー）<br>'+
-   '<span class="legend-swatch" style="background:#ff0000;border-color:#b00020"></span>特別警戒区域（レッド）<br>'+
-   '<span class="legend-swatch" style="background:#00A8FF;border-color:#0057B8"></span>今回対象の既指定箇所調査（6箇所）';
+   '<b>土砂災害区域</b><br>'+ 
+   '<span class="legend-swatch" style="background:#ffff00;border-color:#c9a900"></span>警戒区域（イエロー）<br>'+ 
+   '<span class="legend-swatch" style="background:#ff0000;border-color:#b00020"></span>特別警戒区域（レッド）<br>'+ 
+   '<span class="legend-swatch" style="background:#00A8FF;border-color:#0057B8"></span>今回対象の既指定箇所調査（7箇所）';
  return div;
 };
 
