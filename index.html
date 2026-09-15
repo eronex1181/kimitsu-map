@@ -223,7 +223,6 @@ const cs=L.tileLayer('./tiles/cs/{z}/{x}/{y}.webp',{
 // =====================================================
 // 産総研 地質調査総合センター（GSJ） 地質図
 // 20万分の1：日本シームレス地質図V2
-V2
 // =====================================================
 
 // 20万分の1 日本シームレス地質図V2
@@ -959,9 +958,9 @@ const legend=L.control({position:'bottomright'});
 legend.onAdd=function(){
  const div=L.DomUtil.create('div','legend-box');
  div.innerHTML=
-   '<b>土砂災害区域</b><br>'+ 
-   '<span class="legend-swatch" style="background:#ffff00;border-color:#c9a900"></span>警戒区域（イエロー）<br>'+ 
-   '<span class="legend-swatch" style="background:#ff0000;border-color:#b00020"></span>特別警戒区域（レッド）<br>'+ 
+   '<b>土砂災害区域</b><br>'+
+   '<span class="legend-swatch" style="background:#ffff00;border-color:#c9a900"></span>警戒区域（イエロー）<br>'+
+   '<span class="legend-swatch" style="background:#ff0000;border-color:#b00020"></span>特別警戒区域（レッド）<br>'+
    '<span class="legend-swatch" style="background:#00A8FF;border-color:#0057B8"></span>今回対象の既指定箇所調査（7箇所）';
  return div;
 };
