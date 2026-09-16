@@ -740,7 +740,7 @@ fetch('./A33-25_12Polygon.geojson',{cache:'no-store'})
          weight:1.3,
          opacity:.95,
          fillColor:'#ffff00',
-         fillOpacity:.42
+         fillOpacity:0
        };
      }
 
@@ -750,7 +750,7 @@ fetch('./A33-25_12Polygon.geojson',{cache:'no-store'})
          weight:1.5,
          opacity:.95,
          fillColor:'#ff0000',
-         fillOpacity:.48
+         fillOpacity:0
        };
      }
 
@@ -791,7 +791,7 @@ fetch('./A33-25_12Polygon.geojson',{cache:'no-store'})
 
      l.on({
        mouseover:e=>{
-         e.target.setStyle({weight:4,fillOpacity:.65});
+         e.target.setStyle({weight:4});
          if(e.target.bringToFront)e.target.bringToFront();
        },
        mouseout:e=>{
