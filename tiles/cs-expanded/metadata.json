@@ -1,0 +1,106 @@
+{
+  "source": "国土地理院 DEM1A（1m）16メッシュから作成したCS立体図（2026-08-31）",
+  "source_dimensions": [
+    43302,
+    37066
+  ],
+  "source_crs": "PROJCS[\"JGD_2024_Japan_Zone_9\",GEOGCS[\"JGD_2024\",DATUM[\"Japanese_Geodetic_Datum_2024\",SPHEROID[\"GRS 1980\",6378137,298.257222101004,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"ESRI\",\"106021\"]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",36],PARAMETER[\"central_meridian\",139.833333333333],PARAMETER[\"scale_factor\",0.9999],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+  "source_bounds": [
+    -5312.0,
+    -101699.0,
+    37990.0,
+    -64633.0
+  ],
+  "bounds": [
+    [
+      35.082577022455936,
+      139.7748395683328
+    ],
+    [
+      35.41741900550617,
+      140.2516601813414
+    ]
+  ],
+  "minzoom": 8,
+  "maxzoom": 14,
+  "tile_size": 1024,
+  "leaflet_zoom_offset": -2,
+  "display_max_native_zoom": 16,
+  "format": "webp",
+  "quality": 90,
+  "scheme": "xyz",
+  "tile_counts": {
+    "14": {
+      "total": 460,
+      "nonempty": 372
+    },
+    "13": {
+      "total": 120,
+      "nonempty": 104
+    },
+    "12": {
+      "total": 36,
+      "nonempty": 34
+    },
+    "11": {
+      "total": 9,
+      "nonempty": 9
+    },
+    "10": {
+      "total": 4,
+      "nonempty": 4
+    },
+    "9": {
+      "total": 2,
+      "nonempty": 2
+    },
+    "8": {
+      "total": 1,
+      "nonempty": 1
+    }
+  },
+  "ranges": {
+    "14": [
+      14553,
+      6466,
+      14575,
+      6485
+    ],
+    "13": [
+      7276,
+      3233,
+      7287,
+      3242
+    ],
+    "12": [
+      3638,
+      1616,
+      3643,
+      1621
+    ],
+    "11": [
+      1819,
+      808,
+      1821,
+      810
+    ],
+    "10": [
+      909,
+      404,
+      910,
+      405
+    ],
+    "9": [
+      454,
+      202,
+      455,
+      202
+    ],
+    "8": [
+      227,
+      101,
+      227,
+      101
+    ]
+  }
+}

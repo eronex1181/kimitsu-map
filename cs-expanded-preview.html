@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>君津CS立体図・拡大範囲の確認</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<style>html,body{height:100%;margin:0;font-family:system-ui,sans-serif}#map{height:100%}.note{padding:12px 16px;background:#fffffff0;border-radius:8px;max-width:270px;line-height:1.7;box-shadow:0 2px 12px #0002}h1{font-size:17px;margin:0 0 6px}button{padding:7px 12px;margin:6px 6px 0 0;background:white;border:1px solid #778899;border-radius:5px;cursor:pointer}.leaflet-container{background:#e6ecf0}.leaflet-control-layers{max-height:50vh;overflow:auto}@media(max-width:600px){.note{max-width:210px;font-size:12px;padding:9px}h1{font-size:15px}}</style></head>
+<body><div id="map"></div>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const expanded=[[35.0825770225,139.7748395683],[35.4174190055,140.2516601813]];
+const previous=[[35.1662899944,139.8749059525],[35.3336791683,140.1256305681]];
+const map=L.map('map',{maxZoom:19}).fitBounds(expanded);
+const pale=L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',{maxNativeZoom:18,maxZoom:19,attribution:'© 国土地理院'}).addTo(map);
+const cs=L.tileLayer('./tiles/cs-expanded/{z}/{x}/{y}.webp',{tileSize:1024,zoomOffset:-2,minZoom:10,maxNativeZoom:16,maxZoom:19,bounds:expanded,opacity:1,attribution:'CS立体図：国土地理院DEM1Aを加工'}).addTo(map);
+const old=L.rectangle(previous,{color:'#e22135',weight:3,fill:false}).addTo(map);
+old.bindTooltip('赤枠：以前の表示範囲');
+L.control.layers({'地理院地図':pale},{'CS立体図・拡大版':cs,'以前の表示範囲':old},{collapsed:true}).addTo(map);
+L.control.scale({imperial:false}).addTo(map);
+const note=L.control({position:'bottomleft'});
+note.onAdd=()=>{const el=L.DomUtil.create('div','note');el.innerHTML='<h1>君津CS立体図・拡大版</h1>16メッシュ／約43.3×37.1km<br>赤枠が以前の表示範囲。地形データのない部分は背景地図が見えます。<br><button id="all">拡大版の全体</button><button id="old">以前の範囲</button>';L.DomEvent.disableClickPropagation(el);return el};note.addTo(map);
+document.getElementById('all').onclick=()=>map.fitBounds(expanded);
+document.getElementById('old').onclick=()=>map.fitBounds(previous);
+</script></body></html>

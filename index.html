@@ -212,10 +212,11 @@ const konjaku03=L.tileLayer(
  {minZoom:8,maxNativeZoom:15,maxZoom:19,attribution:'© 今昔マップ on the web'}
 );
 
-// 君津1mDEM由来CS（君津周辺のみ）
-const kimitsuBounds=[[35.1662899944,139.8749059525],[35.3336791683,140.1256305681]];
-const cs=L.tileLayer('./tiles/cs/{z}/{x}/{y}.webp',{
- minZoom:10,maxNativeZoom:16,maxZoom:19,opacity:.70,bounds:kimitsuBounds,pane:'csPane',
+// 君津1mDEM由来CS（16メッシュ拡大版・2026-08-31）
+// 1024pxタイル／zoomOffset=-2：従来の256px・z16と同じ表示解像度。
+const kimitsuBounds=[[35.0825770225,139.7748395683],[35.4174190055,140.2516601813]];
+const cs=L.tileLayer('./tiles/cs-expanded/{z}/{x}/{y}.webp',{
+ tileSize:1024,zoomOffset:-2,minZoom:10,maxNativeZoom:16,maxZoom:19,opacity:.70,bounds:kimitsuBounds,pane:'csPane',
  attribution:'CS立体図：国土地理院DEM1Aを加工'
 });
 
@@ -277,7 +278,7 @@ const baseMaps={
 
 const overlays={
  '地質図 1/20万（シームレスV2・GSJ）':geology200k,
- '君津CS立体図（1m DEM）':cs,
+ '君津CS立体図（1m DEM・拡大版）':cs,
  '① 洪水浸水想定区域（想定最大規模）':floodL2,
  '② 家屋倒壊等氾濫想定区域（氾濫流）':houseFlood,
  '③ 家屋倒壊等氾濫想定区域（河岸侵食）':houseErosion,
