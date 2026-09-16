@@ -181,17 +181,17 @@ map.createPane('markersPane');   map.getPane('markersPane').style.zIndex=450;
 // 背景
 const gsiPale=L.tileLayer(
  'https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',
- {maxZoom:18,attribution:'© 国土地理院'}
+ {maxNativeZoom:18,maxZoom:19,attribution:'© 国土地理院'}
 ).addTo(map);
 
 const gsiStd=L.tileLayer(
  'https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png',
- {maxZoom:18,attribution:'© 国土地理院'}
+ {maxNativeZoom:18,maxZoom:19,attribution:'© 国土地理院'}
 );
 
 const gsiPhoto=L.tileLayer(
  'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg',
- {maxZoom:18,attribution:'© 国土地理院'}
+ {maxNativeZoom:18,maxZoom:19,attribution:'© 国土地理院'}
 );
 
 // 今昔マップ 関東
