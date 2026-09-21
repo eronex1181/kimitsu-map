@@ -132,10 +132,14 @@ map.getPane('facilityPane').style.pointerEvents='none';
 map.createPane('dosyaPane');     map.getPane('dosyaPane').style.zIndex=440;
 
 // 国土基本図1/2500図郭
-// 土砂災害区域(dosyaPane=440)より下に置き、区域クリックを優先する。
-// 図郭は枠線だけをクリック対象にするため、面内部では下のレイヤーへクリックが通る。
+// 土砂災害区域(dosyaPane=440)より下に置き、重なった場所では区域クリックを優先する。
+// 図郭面のタップ判定は残す。Canvasだと上位Paneが画面全体のクリックを遮るため、
+// 図郭と土砂災害区域は明示的にSVGレンダラーを使う。
 map.createPane('zukakuPane');
 map.getPane('zukakuPane').style.zIndex=435;
+
+const zukakuSvgRenderer=L.svg({pane:'zukakuPane'});
+const dosyaSvgRenderer=L.svg({pane:'dosyaPane'});
 
 // 青い今回対象は「見た目だけ」の専用Pane。
 // Pane全体でマウスイベントを無効化するため、クリックは必ず下の黄/赤レイヤーへ通る。
@@ -272,13 +276,17 @@ fetch('./chiba_kodokihonzu_2500.json',{cache:'no-store'})
 .then(data=>{
   zukaku2500Layer=L.geoJSON(data,{
     pane:'zukakuPane',
+    renderer:zukakuSvgRenderer,
+    interactive:true,
     style:{
       color:'#777',
       weight:1,
       opacity:.90,
-      // 透明塗りでもポリゴン内部はクリック判定を持つため、塗り自体を無効化する。
-      // これで図郭線以外の場所では、下にある区域レイヤーへクリックが通る。
-      fill:false
+      // 面は見えないままクリック判定だけ持たせる。
+      // 図郭Paneは土砂災害区域より下なので、重なる場所では区域側が優先される。
+      fill:true,
+      fillColor:'#ffffff',
+      fillOpacity:.001
     },
     onEachFeature:(f,l)=>{
       const p=f.properties||{};
@@ -695,6 +703,7 @@ fetch('./A33-25_12Polygon.geojson',{cache:'no-store'})
 
  dosyaLayer=L.geoJSON(data,{
    pane:'dosyaPane',
+   renderer:dosyaSvgRenderer,
    bubblingMouseEvents:false,
 
    style:f=>{
@@ -1043,4 +1052,4 @@ map.on('mousemove',e=>{
 // 座標は左下に常時表示されるため、地図クリック時の座標ポップアップは出しません。
 </script>
 </body>
-</html>
+</html
