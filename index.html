@@ -111,6 +111,8 @@ html,body{height:100%;margin:0}
 // 千葉県全体
 const map=L.map('map',{preferCanvas:true,maxZoom:19}).setView([35.50,140.13],9);
 
+map.createPane('redLpPane'); map.getPane('redLpPane').style.zIndex=415;
+map.getPane('redLpPane').style.pointerEvents='none';
 map.createPane('csPane');       map.getPane('csPane').style.zIndex=410;
 
 // 地質図は背景として使い、クリックを邪魔しない専用Pane
@@ -192,6 +194,14 @@ const cs=L.tileLayer('./tiles/cs-expanded/{z}/{x}/{y}.webp',{
 });
 
 
+// 提供された0.5m LPグリッドから作成した赤色地形表現図（18図郭）。
+// 2023年12月～2024年2月の測量成果。提供範囲外・欠測箇所は透明。
+const redLp=L.tileLayer('./tiles/red-lp-20261001/{z}/{x}/{y}.webp',{
+ minZoom:10,maxNativeZoom:18,maxZoom:20,opacity:1,
+ bounds:[[35.175230734035026, 139.81596331637908], [35.303444935583045, 140.14094371395313]],pane:'redLpPane',
+ attribution:'LP赤色地形表現図：提供0.5mグリッドを加工（2023–2024年測量）'
+});
+
 // =====================================================
 // 産総研 地質調査総合センター（GSJ） 地質図
 // 20万分の1：日本シームレス地質図V2
@@ -250,6 +260,7 @@ const baseMaps={
 const overlays={
  '地質図 1/20万（シームレスV2・GSJ）':geology200k,
  '君津CS立体図（1m DEM・拡大版）':cs,
+ 'LP赤色地形表現図（0.5m・提供範囲）':redLp,
  '① 洪水浸水想定区域（想定最大規模）':floodL2,
  '② 家屋倒壊等氾濫想定区域（氾濫流）':houseFlood,
  '③ 家屋倒壊等氾濫想定区域（河岸侵食）':houseErosion,
@@ -259,6 +270,11 @@ const overlays={
 };
 
 let ctl=L.control.layers(baseMaps,overlays,{collapsed:false}).addTo(map);
+// 地形図同士が覆い合わないよう、選択した方を表示する。
+map.on('overlayadd',function(e){
+ if(e.layer===redLp && map.hasLayer(cs)) map.removeLayer(cs);
+ if(e.layer===cs && map.hasLayer(redLp)) map.removeLayer(redLp);
+});
 
 L.control.scale({position:'bottomleft',metric:true,imperial:false,maxWidth:150}).addTo(map);
 
