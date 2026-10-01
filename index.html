@@ -729,9 +729,9 @@ fetch('./A33-25_12Polygon.geojson',{cache:'no-store'})
 
      if(zone===1 || zone===3){
        return {
-         color:'#c9a900',
-         weight:1.3,
-         opacity:.95,
+         color:'#ffff00',
+         weight:3.5,
+         opacity:1,
          fillColor:'#ffff00',
          fillOpacity:0
        };
@@ -739,9 +739,9 @@ fetch('./A33-25_12Polygon.geojson',{cache:'no-store'})
 
      if(zone===2 || zone===4){
        return {
-         color:'#b00020',
-         weight:1.5,
-         opacity:.95,
+         color:'#ff0000',
+         weight:4,
+         opacity:1,
          fillColor:'#ff0000',
          fillOpacity:0
        };
@@ -784,7 +784,7 @@ fetch('./A33-25_12Polygon.geojson',{cache:'no-store'})
 
      l.on({
        mouseover:e=>{
-         e.target.setStyle({weight:4,fillOpacity:.65});
+         e.target.setStyle({weight:5.5,fillOpacity:.65});
          if(e.target.bringToFront)e.target.bringToFront();
        },
        mouseout:e=>{
@@ -953,8 +953,8 @@ legend.onAdd=function(){
  const div=L.DomUtil.create('div','legend-box');
  div.innerHTML=
    '<b>土砂災害区域</b><br>'+
-   '<span class="legend-swatch" style="background:transparent;border-color:#c9a900"></span>警戒区域（イエロー）<br>'+
-   '<span class="legend-swatch" style="background:transparent;border-color:#b00020"></span>特別警戒区域（レッド）<br>'+
+   '<span class="legend-swatch" style="background:transparent;border-color:#ffff00;border-width:3.5px"></span>警戒区域（イエロー）<br>'+
+   '<span class="legend-swatch" style="background:transparent;border-color:#ff0000;border-width:4px"></span>特別警戒区域（レッド）<br>'+
    '<span class="legend-swatch" style="background:#00A8FF;border-color:#0057B8"></span>今回対象の既指定箇所調査（7箇所）';
  return div;
 };
