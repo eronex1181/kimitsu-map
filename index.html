@@ -259,8 +259,8 @@ const baseMaps={
 
 const overlays={
  '地質図 1/20万（シームレスV2・GSJ）':geology200k,
- '君津CS立体図（1m DEM・拡大版）':cs,
- 'LP赤色地形表現図（0.5m・提供範囲）':redLp,
+ 'CS立体図（1m DEM・2022年春頃計測）':cs,
+ '赤色地形表現図（0.5m）対象範囲のみ':redLp,
  '① 洪水浸水想定区域（想定最大規模）':floodL2,
  '② 家屋倒壊等氾濫想定区域（氾濫流）':houseFlood,
  '③ 家屋倒壊等氾濫想定区域（河岸侵食）':houseErosion,
@@ -806,7 +806,7 @@ fetch('./A33-25_12Polygon.geojson',{cache:'no-store'})
    textPlaceholder:'箇所番号 / 箇所名 / 住所',
    marker:false,
    zoom:16,
-   collapsed:window.innerWidth<650,
+   collapsed:false,
    initial:false
  }).addTo(map);
 
@@ -824,7 +824,8 @@ fetch('./A33-25_12Polygon.geojson',{cache:'no-store'})
  const tag=document.createElement('span');
  tag.className='search-tag';
  tag.textContent='⚠️ 土砂災害検索';
- (el.querySelector('form')||el).insertBefore(tag,el.firstChild);
+ const searchForm=el.querySelector('form')||el;
+ searchForm.insertBefore(tag,searchForm.firstChild);
 
 })
 .catch(err=>{
