@@ -43,6 +43,38 @@ html,body{height:100%;margin:0}
  pointer-events:none;
 }
 
+#pointinfo{
+ position:absolute;
+ z-index:1001;
+ left:10px;
+ bottom:62px;
+ max-width:min(390px,calc(100vw - 24px));
+ background:rgba(255,255,255,.96);
+ border:1px solid #bbb;
+ box-shadow:0 1px 5px rgba(0,0,0,.25);
+ border-radius:6px;
+ padding:7px 9px;
+ font-size:12px;
+ line-height:1.55;
+ display:none;
+}
+#pointinfo{
+ -webkit-user-select:text;
+ user-select:text;
+ cursor:text;
+}
+#pointinfo .point-title{font-weight:700;margin-bottom:2px}
+#pointinfo .point-address{word-break:break-word}
+#pointinfo .point-coord{font-family:monospace;color:#333}
+#pointinfo .point-note{font-size:10px;color:#777;margin-top:2px}
+
+#pointinfo .plane-coord{
+ margin-top:4px;
+ font-family:monospace;
+ color:#333;
+}
+
+
 /* 左下の距離スケールを見やすく表示 */
 .leaflet-control-scale{
  margin-left:10px !important;
@@ -101,11 +133,14 @@ html,body{height:100%;margin:0}
 <body>
 <div id="map"></div>
 <div id="coord"></div>
+<div id="pointinfo"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet-search@3.0.9/dist/leaflet-search.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+<script src="https://maps.gsi.go.jp/js/muni.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/proj4@2.11.0/dist/proj4.js"></script>
 
 <script>
 // 千葉県全体
@@ -1059,6 +1094,310 @@ function locateMe(buttonEl){
     }
   );
 }
+
+// =====================================================
+// 地図クリック地点の住所・緯度経度・平面直角座標
+// 住所：国土地理院リバースジオコーダ
+// 平面直角座標：国土地理院の市区町村コード先頭2桁（都道府県コード）を
+// 手書き対応表で判定。muni.jsが使えない場合でも系番号を決定する。
+// 日本の測量表記に合わせ、X=北方向、Y=東方向として表示。
+// =====================================================
+let pointInfoSeq=0;
+let lastPointInfo=null;
+
+// JGD2011 平面直角座標系 I～XIX（EPSG:6669～6687）
+const PLANE_SYSTEMS = {
+  1:{roman:'I',epsg:'EPSG:6669',lat0:33,lon0:129.5},
+  2:{roman:'II',epsg:'EPSG:6670',lat0:33,lon0:131},
+  3:{roman:'III',epsg:'EPSG:6671',lat0:36,lon0:132+10/60},
+  4:{roman:'IV',epsg:'EPSG:6672',lat0:33,lon0:133.5},
+  5:{roman:'V',epsg:'EPSG:6673',lat0:36,lon0:134+20/60},
+  6:{roman:'VI',epsg:'EPSG:6674',lat0:36,lon0:136},
+  7:{roman:'VII',epsg:'EPSG:6675',lat0:36,lon0:137+10/60},
+  8:{roman:'VIII',epsg:'EPSG:6676',lat0:36,lon0:138.5},
+  9:{roman:'IX',epsg:'EPSG:6677',lat0:36,lon0:139+50/60},
+ 10:{roman:'X',epsg:'EPSG:6678',lat0:40,lon0:140+50/60},
+ 11:{roman:'XI',epsg:'EPSG:6679',lat0:44,lon0:140.25},
+ 12:{roman:'XII',epsg:'EPSG:6680',lat0:44,lon0:142.25},
+ 13:{roman:'XIII',epsg:'EPSG:6681',lat0:44,lon0:144.25},
+ 14:{roman:'XIV',epsg:'EPSG:6682',lat0:26,lon0:142},
+ 15:{roman:'XV',epsg:'EPSG:6683',lat0:26,lon0:127.5},
+ 16:{roman:'XVI',epsg:'EPSG:6684',lat0:26,lon0:124},
+ 17:{roman:'XVII',epsg:'EPSG:6685',lat0:26,lon0:131},
+ 18:{roman:'XVIII',epsg:'EPSG:6686',lat0:20,lon0:136},
+ 19:{roman:'XIX',epsg:'EPSG:6687',lat0:26,lon0:154}
+};
+
+if(window.proj4){
+  Object.values(PLANE_SYSTEMS).forEach(s=>{
+    proj4.defs(
+      s.epsg,
+      `+proj=tmerc +lat_0=${s.lat0} +lon_0=${s.lon0} +k=0.9999 +x_0=0 +y_0=0 +ellps=GRS80 +units=m +no_defs`
+    );
+  });
+}
+
+// 都道府県コード → 都道府県名
+const PREF_CODE_NAME = {
+ '01':'北海道','02':'青森県','03':'岩手県','04':'宮城県','05':'秋田県','06':'山形県','07':'福島県',
+ '08':'茨城県','09':'栃木県','10':'群馬県','11':'埼玉県','12':'千葉県','13':'東京都','14':'神奈川県',
+ '15':'新潟県','16':'富山県','17':'石川県','18':'福井県','19':'山梨県','20':'長野県','21':'岐阜県',
+ '22':'静岡県','23':'愛知県','24':'三重県','25':'滋賀県','26':'京都府','27':'大阪府','28':'兵庫県',
+ '29':'奈良県','30':'和歌山県','31':'鳥取県','32':'島根県','33':'岡山県','34':'広島県','35':'山口県',
+ '36':'徳島県','37':'香川県','38':'愛媛県','39':'高知県','40':'福岡県','41':'佐賀県','42':'長崎県',
+ '43':'熊本県','44':'大分県','45':'宮崎県','46':'鹿児島県','47':'沖縄県'
+};
+
+// 通常の都道府県 → 平面直角座標系
+const PREF_CODE_PLANE = {
+ '02':10,'03':10,'04':10,'05':10,'06':10,
+ '07':9,'08':9,'09':9,'10':9,'11':9,'12':9,'14':9,
+ '15':8,'19':8,'20':8,'22':8,
+ '16':7,'17':7,'21':7,'23':7,
+ '18':6,'24':6,'25':6,'26':6,'27':6,'29':6,'30':6,
+ '28':5,'31':5,'33':5,
+ '36':4,'37':4,'38':4,'39':4,
+ '32':3,'34':3,'35':3,
+ '40':2,'41':2,'43':2,'44':2,'45':2,
+ '42':1
+};
+
+function normalizeMuniCode(code){
+  const s=String(code??'').replace(/\D/g,'');
+  if(!s)return '';
+  return s.padStart(5,'0');
+}
+
+function prefCodeFromMuni(code){
+  const s=normalizeMuniCode(code);
+  return s.length>=2 ? s.slice(0,2) : '';
+}
+
+function municipalityPartsFromCode(code){
+  const prefCode=prefCodeFromMuni(code);
+  const fallbackPref=PREF_CODE_NAME[prefCode]||'';
+
+  try{
+    const raw=window.GSI?.MUNI_ARRAY?.[String(code)] ||
+              window.GSI?.MUNI_ARRAY?.[normalizeMuniCode(code)];
+    if(raw){
+      const parts=String(raw).split(',');
+      return {
+        pref:parts[1]||fallbackPref,
+        muni:parts[3]||'',
+        prefCode
+      };
+    }
+  }catch(e){}
+
+  // muni.jsが使えなくても都道府県名だけは手書き表から返す。
+  return {pref:fallbackPref,muni:'',prefCode};
+}
+
+function planeSystemFromPrefCode(prefCode,lat,lng){
+  // 北海道：経度でXI・XII・XIIIを判定する簡易手書きフォールバック
+  if(prefCode==='01'){
+    if(lng < 141.5)return 11;
+    if(lng < 143.5)return 12;
+    return 13;
+  }
+
+  // 東京都：本土はIX系、島しょ部は位置で分岐
+  if(prefCode==='13'){
+    if(lat >= 33.5)return 9;
+    if(lng >= 150)return 19;
+    if(lat < 24)return 18;
+    return 14;
+  }
+
+  // 鹿児島県：本土はII系、一部島しょ部はI系
+  if(prefCode==='46'){
+    const islandZone1=(lat>=27 && lat<=32 && lng>=128.3 && lng<=130.3);
+    return islandZone1 ? 1 : 2;
+  }
+
+  // 沖縄県：西側XVI、中央XV、東側XVII
+  if(prefCode==='47'){
+    if(lng < 126)return 16;
+    if(lng > 130)return 17;
+    return 15;
+  }
+
+  return PREF_CODE_PLANE[prefCode] || null;
+}
+
+// 逆ジオコーダが市区町村コードを返さない場合の位置フォールバック。
+// 特にこの千葉県Web地図では、千葉県域なら確実にIX系とする。
+function planeSystemFromLatLngFallback(lat,lng){
+  // 千葉県のおおよその範囲
+  if(lat>=34.8 && lat<=36.3 && lng>=139.7 && lng<=141.0)return 9;
+
+  // 石川・富山周辺
+  if(lat>=35.8 && lat<=37.9 && lng>=136.0 && lng<=138.0)return 7;
+
+  // 長野周辺
+  if(lat>=35.0 && lat<=37.2 && lng>=137.3 && lng<=139.2)return 8;
+
+  // 北海道
+  if(lat>=41.3 && lat<=45.8){
+    if(lng<141.5)return 11;
+    if(lng<143.5)return 12;
+    return 13;
+  }
+
+  return null;
+}
+
+function toPlaneRect(lat,lng,systemNo){
+  if(!window.proj4 || !systemNo)return null;
+  const sys=PLANE_SYSTEMS[systemNo];
+  if(!sys)return null;
+
+  try{
+    // proj4は [Easting, Northing] を返す。
+    // 日本の平面直角座標は X=北方向、Y=東方向。
+    const [easting,northing]=proj4('EPSG:4326',sys.epsg,[lng,lat]);
+    if(!Number.isFinite(easting)||!Number.isFinite(northing))return null;
+    return {
+      systemNo,
+      roman:sys.roman,
+      epsg:sys.epsg,
+      x:northing,
+      y:easting
+    };
+  }catch(e){
+    console.warn('平面直角座標変換に失敗:',e);
+    return null;
+  }
+}
+
+function renderPointInfo(panel,info,addressText,note=''){
+  const plane=info.plane;
+  const elevationHtml=Number.isFinite(info.elevation)
+    ? `<div class="point-coord">標高：${info.elevation.toFixed(1)} m（${esc(info.elevationSource||'')}）</div>`
+    : '';
+  const planeHtml=plane
+    ? `<div class="plane-coord">平面直角座標 第${plane.roman}系（JGD2011）<br>`+
+      `X：${plane.x.toFixed(3)} m<br>`+
+      `Y：${plane.y.toFixed(3)} m</div>`
+    : `<div class="plane-coord">平面直角座標：系番号を判定できません</div>`;
+
+  panel.innerHTML=
+    `<div class="point-title">クリック地点</div>`+
+    `<div class="point-address">住所：${addressText}</div>`+
+    `<div class="point-coord">緯度：${info.lat.toFixed(7)}<br>経度：${info.lng.toFixed(7)}</div>`+
+    elevationHtml+
+    planeHtml+
+    (note ? `<div class="point-note">${note}</div>` : '');
+}
+
+async function showClickedPointInfo(latlng){
+  if(!latlng)return;
+
+  const panel=document.getElementById('pointinfo');
+  if(!panel)return;
+
+  const lat=Number(latlng.lat);
+  const lng=Number(latlng.lng);
+  if(!Number.isFinite(lat)||!Number.isFinite(lng))return;
+
+  const seq=++pointInfoSeq;
+
+  // 住所取得前でも、位置フォールバックで先に系番号を出せるようにする。
+  let fallbackSystem=planeSystemFromLatLngFallback(lat,lng);
+  let fallbackPlane=toPlaneRect(lat,lng,fallbackSystem);
+
+  lastPointInfo={
+    lat,lng,plane:fallbackPlane,address:'',pref:'',muni:'',elevation:null,elevationSource:''
+  };
+
+  panel.style.display='block';
+  renderPointInfo(
+    panel,
+    lastPointInfo,
+    '取得中…',
+    fallbackPlane
+      ? `平面直角座標：位置から第${fallbackPlane.roman}系を仮判定`
+      : '住所取得後に平面直角座標系を判定します'
+  );
+
+  // 標高はマウス位置表示と同じ国土地理院標高タイルを利用。
+  getElevationAt(lat,lng).then(result=>{
+    if(seq!==pointInfoSeq || !result)return;
+    lastPointInfo.elevation=result.height;
+    lastPointInfo.elevationSource=result.source;
+    const addressText=lastPointInfo.address ? esc(lastPointInfo.address) : '取得中…';
+    const plane=lastPointInfo.plane;
+    const planeNote=plane
+      ? `平面直角座標系：第${plane.roman}系（${plane.epsg}）`
+      : '住所取得後に平面直角座標系を判定します';
+    renderPointInfo(panel,lastPointInfo,addressText,`住所：国土地理院リバースジオコーダ ／ ${planeNote}`);
+  }).catch(()=>{});
+
+  try{
+    const url=
+      `https://mreversegeocoder.gsi.go.jp/reverse-geocoder/LonLatToAddress?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`;
+    const r=await fetch(url,{cache:'no-store'});
+    if(!r.ok)throw new Error(`HTTP ${r.status}`);
+    const j=await r.json();
+
+    if(seq!==pointInfoSeq)return;
+
+    const result=j?.results||{};
+    const parts=municipalityPartsFromCode(result.muniCd);
+    const town=String(result.lv01Nm||'').trim();
+
+    // muni.jsが使えない場合でも「千葉県山之郷」のように都道府県名は表示可能。
+    const address=`${parts.pref}${parts.muni}${town}`.trim();
+
+    let systemNo=planeSystemFromPrefCode(parts.prefCode,lat,lng);
+    if(!systemNo)systemNo=planeSystemFromLatLngFallback(lat,lng);
+
+    const plane=toPlaneRect(lat,lng,systemNo);
+
+    lastPointInfo.address=address;
+    lastPointInfo.pref=parts.pref;
+    lastPointInfo.muni=parts.muni;
+    lastPointInfo.plane=plane;
+
+    const planeNote=plane
+      ? `平面直角座標系：第${plane.roman}系（${plane.epsg}）`
+      : '平面直角座標系を判定できませんでした';
+
+    renderPointInfo(
+      panel,
+      lastPointInfo,
+      address ? esc(address) : (town ? esc(town) : '住所情報なし'),
+      `住所：国土地理院リバースジオコーダ ／ ${planeNote}`
+    );
+  }catch(err){
+    if(seq!==pointInfoSeq)return;
+
+    // 住所取得失敗時も、位置フォールバックでXYは残す。
+    renderPointInfo(
+      panel,
+      lastPointInfo,
+      '取得できませんでした',
+      lastPointInfo.plane
+        ? `住所取得失敗 ／ 平面直角座標は位置から第${lastPointInfo.plane.roman}系を判定`
+        : '住所・平面直角座標系を判定できませんでした'
+    );
+    console.warn('住所の逆ジオコーディングに失敗:',err);
+  }
+}
+
+// 各レイヤー側で stopPropagation されても地点を拾えるよう、
+// DOMのcapture段階でクリック位置を取得する。
+// レイヤー操作ボタン・ポップアップ内部は除外。
+map.getContainer().addEventListener('click',ev=>{
+  const target=ev.target;
+  if(target?.closest?.('.leaflet-control,.leaflet-popup,.leaflet-tooltip,#pointinfo'))return;
+
+  try{
+    const latlng=map.mouseEventToLatLng(ev);
+    showClickedPointInfo(latlng);
+  }catch(e){}
+},true);
 
 // =====================================================
 // 座標＋標高（国土地理院 PNG標高タイル）
