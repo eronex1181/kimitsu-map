@@ -1060,10 +1060,136 @@ function locateMe(buttonEl){
   );
 }
 
-// 座標
-map.on('mousemove',e=>{
+// =====================================================
+// 座標＋標高（国土地理院 PNG標高タイル）
+// DEM1A(1m) → DEM5A → DEM5B → DEM5C → DEM10B の順で取得。
+// マウス移動中は座標を即時更新し、120ms止まった地点の標高を取得します。
+// =====================================================
+map.attributionControl.addAttribution('標高：国土地理院 標高タイル');
+
+const elevationSources=[
+ {id:'dem1a_png',label:'DEM1A',z:17},
+ {id:'dem5a_png',label:'DEM5A',z:15},
+ {id:'dem5b_png',label:'DEM5B',z:15},
+ {id:'dem5c_png',label:'DEM5C',z:15},
+ {id:'dem_png',label:'DEM10B',z:14}
+];
+
+const elevationTileCache=new Map();
+const ELEVATION_CACHE_MAX=80;
+
+function elevationTilePixel(lat,lng,z){
+ const n=Math.pow(2,z);
+ const latClamped=Math.max(-85.05112878,Math.min(85.05112878,lat));
+ const latRad=latClamped*Math.PI/180;
+ const xf=(lng+180)/360*n;
+ const yf=(1-Math.log(Math.tan(latRad)+1/Math.cos(latRad))/Math.PI)/2*n;
+ const x=Math.floor(xf);
+ const y=Math.floor(yf);
+ const px=Math.max(0,Math.min(255,Math.floor((xf-x)*256)));
+ const py=Math.max(0,Math.min(255,Math.floor((yf-y)*256)));
+ return {x,y,px,py};
+}
+
+function decodeGsiElevation(r,g,b){
+ const x=(r<<16)+(g<<8)+b;
+ if(x===Math.pow(2,23))return null;
+ return x<Math.pow(2,23) ? x*0.01 : (x-Math.pow(2,24))*0.01;
+}
+
+function imageBlobToRgba(blob){
+ return new Promise((resolve,reject)=>{
+   const objectUrl=URL.createObjectURL(blob);
+   const img=new Image();
+   img.onload=()=>{
+     try{
+       const canvas=document.createElement('canvas');
+       canvas.width=256;
+       canvas.height=256;
+       const ctx=canvas.getContext('2d',{willReadFrequently:true});
+       ctx.drawImage(img,0,0,256,256);
+       const rgba=ctx.getImageData(0,0,256,256).data;
+       URL.revokeObjectURL(objectUrl);
+       resolve(rgba);
+     }catch(err){
+       URL.revokeObjectURL(objectUrl);
+       reject(err);
+     }
+   };
+   img.onerror=()=>{
+     URL.revokeObjectURL(objectUrl);
+     reject(new Error('標高タイル画像を読めませんでした'));
+   };
+   img.src=objectUrl;
+ });
+}
+
+async function loadElevationTile(source,x,y){
+ const key=`${source.id}/${source.z}/${x}/${y}`;
+ if(elevationTileCache.has(key))return elevationTileCache.get(key);
+
+ const promise=(async()=>{
+   try{
+     const url=`https://cyberjapandata.gsi.go.jp/xyz/${source.id}/${source.z}/${x}/${y}.png`;
+     const r=await fetch(url,{mode:'cors',cache:'force-cache'});
+     if(!r.ok)return null;
+     return await imageBlobToRgba(await r.blob());
+   }catch(err){
+     return null;
+   }
+ })();
+
+ elevationTileCache.set(key,promise);
+ const rgba=await promise;
+
+ if(!rgba)elevationTileCache.delete(key);
+
+ while(elevationTileCache.size>ELEVATION_CACHE_MAX){
+   const firstKey=elevationTileCache.keys().next().value;
+   elevationTileCache.delete(firstKey);
+ }
+ return rgba;
+}
+
+async function getElevationAt(lat,lng){
+ for(const source of elevationSources){
+   const p=elevationTilePixel(lat,lng,source.z);
+   const rgba=await loadElevationTile(source,p.x,p.y);
+   if(!rgba)continue;
+
+   const i=(p.py*256+p.px)*4;
+   const h=decodeGsiElevation(rgba[i],rgba[i+1],rgba[i+2]);
+   if(h!==null && Number.isFinite(h)){
+     return {height:h,source:source.label};
+   }
+ }
+ return null;
+}
+
+function showCoord(latlng,elevationText){
  document.getElementById('coord').textContent=
- `${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}  Z${map.getZoom()}`;
+   `${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}  ${elevationText}  Z${map.getZoom()}`;
+}
+
+let elevationTimer=null;
+let elevationRequestNo=0;
+
+map.on('mousemove',e=>{
+ const ll=e.latlng;
+ const requestNo=++elevationRequestNo;
+
+ showCoord(ll,'標高：取得中…');
+ if(elevationTimer)clearTimeout(elevationTimer);
+
+ elevationTimer=setTimeout(async()=>{
+   const result=await getElevationAt(ll.lat,ll.lng);
+   if(requestNo!==elevationRequestNo)return;
+
+   const txt=result
+     ? `標高：${result.height.toFixed(1)}m（${result.source}）`
+     : '標高：データなし';
+   showCoord(ll,txt);
+ },120);
 });
 
 // 地図上の区域・施設クリックでは各レイヤーの属性ポップアップを優先します。
